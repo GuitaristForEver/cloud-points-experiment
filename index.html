@@ -312,26 +312,75 @@ const vertexShader = `
   uniform float uMouseRadius;
   uniform float uMouseStrength;
   uniform float uMouseEnabled;
+  uniform int uObjectType;
+  uniform vec3 uWells[3];
+  uniform int uWellCount;
+  uniform float uWellStrength;
   attribute vec3 aColor;
   attribute float aSize;
+  attribute float aBellFlag;
   varying vec3 vColor;
   varying float vAlpha;
+  varying vec3 vWorldPos;
 
   void main() {
     vColor = aColor;
-
-    // Mouse force field (GPU-based, smooth exponential falloff)
-    vec3 worldPos = (modelMatrix * vec4(position, 1.0)).xyz;
     vec3 pos = position;
+
+    // GPU Wave animation (uObjectType == 1)
+    if (uObjectType == 1) {
+      float x = pos.x;
+      float z = pos.z;
+      pos.y = sin(x * 1.5 + uTime) * 0.4
+            + sin(z * 2.0 + uTime * 0.7) * 0.3
+            + sin((x + z) * 1.0 + uTime * 1.3) * 0.2
+            + sin(x * 3.0 + z * 1.5 + uTime * 0.5) * 0.1;
+      float ct = (pos.y + 1.0) / 2.0;
+      vColor = vec3(ct);
+    }
+
+    // GPU Jellyfish animation (uObjectType == 2)
+    if (uObjectType == 2) {
+      if (aBellFlag > 0.5) {
+        // Bell pulse
+        float pulse = sin(uTime * 2.0) * 0.04;
+        float scale = 1.0 + pulse;
+        pos.x *= scale;
+        pos.z *= scale;
+        pos.y *= (1.0 - pulse * 0.5);
+      } else {
+        // Tentacle sway — use position as unique phase
+        float t = abs(pos.y) / 3.0;
+        float sway = sin(uTime * 1.5 + t * 5.0) * 0.15 * t;
+        pos.x += sway;
+        pos.z += sway * 0.5;
+        pos.y += sin(uTime + t * 3.0) * 0.05 * t;
+      }
+    }
+
+    // Compute world position AFTER animation (gravity wells track animated pos)
+    vec3 worldPos = (modelMatrix * vec4(pos, 1.0)).xyz;
+    vWorldPos = worldPos;
+
+    // Mouse force field (smooth Gaussian falloff)
     if (uMouseEnabled > 0.5) {
       vec3 toMouse = worldPos - uMouse;
       float d = length(toMouse);
       if (d > 0.001) {
-        // Smooth gaussian-like falloff — no hard edge
         float falloff = exp(-d * d / (uMouseRadius * uMouseRadius * 0.5));
         float force = falloff * uMouseStrength;
-        // Slight size boost near cursor for visual feedback
         pos += normalize(toMouse) * force;
+      }
+    }
+
+    // Gravity wells attraction
+    for (int w = 0; w < 3; w++) {
+      if (w >= uWellCount) break;
+      vec3 toWell = uWells[w] - worldPos;
+      float dw = length(toWell);
+      if (dw > 0.001) {
+        float falloff = exp(-dw * dw / 2.25); // radius 1.5
+        pos += normalize(toWell) * falloff * uWellStrength;
       }
     }
 
