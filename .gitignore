@@ -1,0 +1,17 @@
+# System files
+.DS_Store
+*.log
+
+# Editor
+.vscode/
+.idea/
+
+# Vercel
+.vercel
+
+# Playwright test artifacts
+.playwright/
+.playwright-cli/
+
+# Claude
+.claude/

@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Cloud Points Experiment</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    overflow: hidden;
+    background: #000;
+    font-family: 'Helvetica Neue', sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  canvas {
+    display: block;
+    touch-action: none;
+    -webkit-touch-callout: none;
+  }
+  #info {
+    position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.3); font-size: 11px; pointer-events: none;
+    text-align: center; letter-spacing: 2px;
+  }
+  #credits {
+    position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    text-align: center; font-size: 10px; letter-spacing: 1px;
+    color: rgba(255,255,255,0.2);
+  }
+  #credits a {
+    color: rgba(180, 160, 255, 0.5);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    pointer-events: auto;
+  }
+  #credits a:hover {
+    color: rgba(180, 160, 255, 0.9);
+    text-shadow: 0 0 8px rgba(180, 160, 255, 0.4);
+  }
+  #credits span {
+    margin: 0 8px;
+    opacity: 0.4;
+  }
+  #title {
+    position: absolute; top: 24px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.5); font-size: 16px; font-weight: 200;
+    letter-spacing: 6px; text-transform: uppercase; pointer-events: none;
+  }
+
+  /* ── lil-gui reskin ── */
+  .lil-gui {
+    --background-color: rgba(8, 8, 14, 0.88) !important;
+    --text-color: rgba(210, 210, 230, 0.9) !important;
+    --title-background-color: rgba(20, 20, 36, 0.95) !important;
+    --title-text-color: rgba(180, 160, 255, 1) !important;
+    --widget-color: rgba(30, 30, 50, 0.9) !important;
+    --hover-color: rgba(50, 50, 80, 0.9) !important;
+    --focus-color: rgba(120, 80, 255, 0.4) !important;
+    --number-color: #a78bfa !important;
+    --string-color: #67e8f9 !important;
+    --font-size: 12px !important;
+    --input-font-size: 12px !important;
+    --font-family: 'Helvetica Neue', sans-serif !important;
+    --padding: 5px !important;
+    --spacing: 5px !important;
+    --widget-height: 24px !important;
+    --name-width: 44% !important;
+    --slider-knob-width: 2px !important;
+    --slider-input-width: 27% !important;
+    --color-width: 27% !important;
+    --folder-indent: 7px !important;
+    --scrollbar-width: 3px !important;
+    border: 1px solid rgba(120, 80, 255, 0.2) !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(120,80,255,0.15), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+    overflow: hidden !important;
+    width: 280px !important;
+  }
+  .lil-gui .title {
+    letter-spacing: 3px !important;
+    text-transform: uppercase !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    padding: 10px 12px !important;
+    border-bottom: 1px solid rgba(120, 80, 255, 0.15) !important;
+  }
+  .lil-gui .title::before {
+    content: '✦ ' !important;
+    opacity: 0.6;
+  }
+  .lil-gui .children {
+    padding: 4px 2px !important;
+  }
+  .lil-gui.root > .children > .lil-gui > .title {
+    background: rgba(255,255,255,0.03) !important;
+    border-radius: 6px !important;
+    margin: 2px 6px !important;
+    padding: 6px 10px !important;
+    font-size: 9px !important;
+    letter-spacing: 2px !important;
+    border: none !important;
+    border-left: 2px solid rgba(120, 80, 255, 0.4) !important;
+    color: rgba(180, 160, 255, 0.85) !important;
+  }
+  .lil-gui .controller {
+    padding: 0 8px !important;
+    border-radius: 4px !important;
+    margin: 1px 4px !important;
+  }
+  .lil-gui .controller:hover {
+    background: rgba(255,255,255,0.04) !important;
+  }
+  .lil-gui .controller .name {
+    color: rgba(200, 200, 220, 0.75) !important;
+    font-size: 11px !important;
+  }
+  .lil-gui input[type=range] {
+    accent-color: #7c3aed !important;
+  }
+  .lil-gui .slider {
+    background: rgba(120, 80, 255, 0.15) !important;
+    border-radius: 2px !important;
+  }
+  .lil-gui .fill {
+    background: linear-gradient(90deg, #7c3aed, #a78bfa) !important;
+    border-radius: 2px !important;
+  }
+  .lil-gui button {
+    background: rgba(120, 80, 255, 0.15) !important;
+    border: 1px solid rgba(120, 80, 255, 0.3) !important;
+    border-radius: 6px !important;
+    color: #a78bfa !important;
+    letter-spacing: 1px !important;
+    font-size: 10px !important;
+    transition: all 0.2s !important;
+    text-transform: uppercase !important;
+  }
+  .lil-gui button:hover {
+    background: rgba(120, 80, 255, 0.3) !important;
+    border-color: rgba(120, 80, 255, 0.6) !important;
+    color: #c4b5fd !important;
+  }
+  .lil-gui select {
+    background: rgba(20, 20, 40, 0.9) !important;
+    border: 1px solid rgba(120, 80, 255, 0.25) !important;
+    border-radius: 5px !important;
+    color: #a78bfa !important;
+    font-size: 11px !important;
+  }
+  .lil-gui input[type=checkbox] {
+    accent-color: #7c3aed !important;
+  }
+
+  /* ── Mobile Responsive ── */
+  @media (max-width: 768px) {
+    .lil-gui {
+      width: min(280px, calc(100vw - 32px)) !important;
+      right: 16px !important;
+      top: 60px !important;
+      max-height: calc(100vh - 140px) !important;
+      font-size: 11px !important;
+    }
+    .lil-gui .title {
+      font-size: 9px !important;
+      padding: 8px 10px !important;
+    }
+    .lil-gui .controller .name {
+      font-size: 10px !important;
+    }
+    #title {
+      font-size: 12px !important;
+      letter-spacing: 4px !important;
+      top: 16px !important;
+    }
+    #info {
+      font-size: 9px !important;
+      bottom: 32px !important;
+      letter-spacing: 1px !important;
+    }
+    #credits {
+      font-size: 9px !important;
+      bottom: 8px !important;
+    }
+  }
+  @media (max-width: 480px) {
+    .lil-gui {
+      width: min(240px, calc(100vw - 24px)) !important;
+      right: 12px !important;
+      top: 50px !important;
+    }
+    #title {
+      font-size: 10px !important;
+      letter-spacing: 3px !important;
+    }
+    #info {
+      display: none !important;
+    }
+  }
+  @media (pointer: coarse) {
+    .lil-gui .controller {
+      min-height: 32px !important;
+    }
+    .lil-gui button {
+      min-height: 36px !important;
+      padding: 8px !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="title">CLOUD POINTS</div>
+<div id="info">drag to orbit · scroll to zoom · hover to interact</div>
+<div id="credits">
+  <a href="https://github.com/GuitaristForEver" target="_blank" rel="noopener">github</a>
+  <span>·</span>
+  <a href="https://www.linkedin.com/in/yuval-gabay-68963253/" target="_blank" rel="noopener">linkedin</a>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { AfterimagePass } from 'three/addons/postprocessing/AfterimagePass.js';
+import GUI from 'https://cdn.jsdelivr.net/npm/lil-gui@0.19/+esm';
+
+// ── Renderer ───────────────────────────────────────
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  powerPreference: 'high-performance',
+});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000005);
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 1.5, 5);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.5;
+controls.maxDistance = 15;
+controls.minDistance = 1;
+
+// ── Post-Processing ────────────────────────────────
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+
+const afterimagePass = new AfterimagePass(0.0);
+afterimagePass.enabled = false;
+composer.addPass(afterimagePass);
+
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.6, 0.3, 0.3
+);
+composer.addPass(bloomPass);
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ── Mouse Raycaster (smooth) ───────────────────────
+const raycaster = new THREE.Raycaster();
+const mouseNDC = new THREE.Vector2(9999, 9999);
+const mouseTarget = new THREE.Vector3(9999, 9999, 9999);
+const mouseWorld = new THREE.Vector3(9999, 9999, 9999);
+const cameraPlane = new THREE.Plane();
+let mouseActive = false;
+const _camDir = new THREE.Vector3();
+const _mouseOff = new THREE.Vector3(9999, 9999, 9999);
+
+renderer.domElement.addEventListener('mousemove', (e) => {
+  mouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  mouseActive = true;
+});
+renderer.domElement.addEventListener('mouseleave', () => {
+  mouseActive = false;
+});
+
+// ── Shaders ────────────────────────────────────────
+const vertexShader = `
+  uniform float uSize;
+  uniform float uPixelRatio;
+  uniform float uTime;
+  uniform vec3 uMouse;
+  uniform float uMouseRadius;
+  uniform float uMouseStrength;
+  uniform float uMouseEnabled;
+  attribute vec3 aColor;
+  attribute float aSize;
+  varying vec3 vColor;
+  varying float vAlpha;
+
+  void main() {
+    vColor = aColor;
+
+    // Mouse force field (GPU-based, smooth exponential falloff)
+    vec3 worldPos = (modelMatrix * vec4(position, 1.0)).xyz;
+    vec3 pos = position;
+    if (uMouseEnabled > 0.5) {
+      vec3 toMouse = worldPos - uMouse;
+      float d = length(toMouse);
+      if (d > 0.001) {
+        // Smooth gaussian-like falloff — no hard edge
+        float falloff = exp(-d * d / (uMouseRadius * uMouseRadius * 0.5));
+        float force = falloff * uMouseStrength;
+        // Slight size boost near cursor for visual feedback
+        pos += normalize(toMouse) * force;
+      }
+    }
+
+    vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+    float dist = -mvPosition.z;
+    gl_PointSize = uSize * aSize * uPixelRatio * (1.0 / dist);
+    gl_PointSize = max(gl_PointSize, 1.0);
+    vAlpha = smoothstep(14.0, 2.0, dist);
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`;
+
+const fragmentShader = `
+  varying vec3 vColor;
+  varying float vAlpha;
+
+  void main() {
+    float dist = length(gl_PointCoord - vec2(0.5));
+    if (dist > 0.5) discard;
+    float strength = 1.0 - dist * 2.0;
+    strength = pow(strength, 2.0);
+    gl_FragColor = vec4(vColor, strength * vAlpha * 0.6);
+  }
+`;
+
+// ── Color Themes ───────────────────────────────────
+const themes = {
+  Neon:   [new THREE.Color(0xff00ff), new THREE.Color(0x00ffff), new THREE.Color(0xffff00)],
+  Warm:   [new THREE.Color(0xff2200), new THREE.Color(0xff6600), new THREE.Color(0xffcc00)],
+  Cool:   [new THREE.Color(0x0033ff), new THREE.Color(0x0099ff), new THREE.Color(0x66ddff)],
+  Mono:   [new THREE.Color(0xffffff), new THREE.Color(0x999999), new THREE.Color(0x444444)],
+  Aurora: [new THREE.Color(0x00ff88), new THREE.Color(0x0066ff), new THREE.Color(0xee00aa)],
+  Fire:   [new THREE.Color(0xff0000), new THREE.Color(0xff4400), new THREE.Color(0xffaa00)],
+  Ocean:  [new THREE.Color(0x001133), new THREE.Color(0x0066aa), new THREE.Color(0x44ddff)],
+};
+
+// ══════════════════════════════════════════════════════
+// ── SHAPE GENERATORS ─────────────────────────────────
+// ══════════════════════════════════════════════════════
+
+// ── Real Galaxy Morphologies ────────────────────────
+let galaxyPatternIndex = 0;
+const galaxyPatternNames = ['Milky Way','Andromeda (M31)','Sombrero (M104)','Whirlpool (M51)','Magellanic Cloud'];
+
+function generateGalaxy(count) {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const pattern = galaxyPatternIndex % galaxyPatternNames.length;
+  let idx = 0;
+
+  function place(x, y, z, r, g, b, s) {
+    if (idx >= count) return;
+    const i3 = idx * 3;
+    positions[i3] = x; positions[i3+1] = y; positions[i3+2] = z;
+    colors[i3] = r; colors[i3+1] = g; colors[i3+2] = b;
+    sizes[idx] = s;
+    idx++;
+  }
+
+  if (pattern === 0) {
+    // ── Milky Way — barred spiral, 4 arms ──
+    const R = 3.5, spin = 1.8;
+    const barHalf = 1.2, barW = 0.25;
+    const bulgeN = Math.floor(count * 0.18);
+    const barN   = Math.floor(count * 0.10);
+    const armN   = Math.floor(count * 0.56);
+    const diskN  = count - bulgeN - barN - armN;
+
+    // Central bulge — dense, warm yellow-white
+    for (let i = 0; i < bulgeN; i++) {
+      const r = Math.pow(Math.random(), 2) * 0.7;
+      const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
+      const lum = 0.85 + Math.random()*0.15;
+      place(r*Math.sin(th)*Math.cos(ph), r*Math.cos(th)*0.6, r*Math.sin(th)*Math.sin(ph),
+        lum, lum*0.88, lum*0.6, 1.2 + Math.random()*1.2);
+    }
+
+    // Central bar — elongated along x
+    for (let i = 0; i < barN; i++) {
+      const bx = (Math.random()-0.5)*2*barHalf;
+      const by = (Math.random()-0.5)*0.08;
+      const bz = (Math.random()-0.5)*2*barW;
+      const lum = 0.7 + Math.random()*0.2;
+      place(bx, by, bz, lum, lum*0.85, lum*0.55, 0.6+Math.random()*0.6);
+    }
+
+    // 4 spiral arms (Sagittarius, Perseus, Norma, Scutum-Centaurus)
+    for (let i = 0; i < armN; i++) {
+      const arm = i % 4;
+      const armOffset = (arm / 4) * Math.PI * 2;
+      // Arms emerge from bar ends
+      const startR = barHalf * 0.85;
+      const r = startR + Math.pow(Math.random(), 0.6) * (R - startR);
+      const angle = armOffset + (r - startR) * spin + (Math.random()-0.5)*0.35;
+      const spread = 0.08 + r * 0.05;
+      const x = Math.cos(angle)*r + (Math.random()-0.5)*spread;
+      const z = Math.sin(angle)*r + (Math.random()-0.5)*spread;
+      const y = (Math.random()-0.5)*0.15 * (r/R);
+      // Inner arms: warm, outer: blue star-forming
+      const t = (r - startR) / (R - startR);
+      const br = 0.6 + (1-t)*0.3 + Math.random()*0.15;
+      const bg = 0.55 + (1-t)*0.25 + Math.random()*0.15;
+      const bb = 0.45 + t*0.55 + Math.random()*0.2;
+      // HII star-forming clumps in arms
+      const isHII = Math.random() < 0.08;
+      place(x, y, z,
+        isHII ? 0.3 : br, isHII ? 0.7 : bg, isHII ? 1.0 : bb,
+        isHII ? 1.5+Math.random() : 0.5+Math.random()*0.8);
+    }
+
+    // Thin background disk
+    for (let i = 0; i < diskN; i++) {
+      const r = Math.pow(Math.random(), 0.4) * R * 0.95;
+      const a = Math.random() * Math.PI * 2;
+      const y = (Math.random()-0.5) * 0.12 * Math.exp(-r/R);
+      place(Math.cos(a)*r, y, Math.sin(a)*r,
+        0.25+Math.random()*0.15, 0.2+Math.random()*0.15, 0.35+Math.random()*0.2,
+        0.3+Math.random()*0.35);
+    }
+
+  } else if (pattern === 1) {
+    // ── Andromeda M31 — grand design spiral, ~77° inclined ──
+    const R = 3.8, spin = 1.2;
+    // Incline: elongate along x, compress z (77° from face-on)
+    const incl = 77 * Math.PI / 180;
+    const cosI = Math.cos(incl), sinI = Math.sin(incl);
+    const bulgeN = Math.floor(count * 0.22);
+    const armN   = Math.floor(count * 0.50);
+    const diskN  = count - bulgeN - armN;
+
+    // Large, bright central bulge — very prominent in Andromeda
+    for (let i = 0; i < bulgeN; i++) {
+      const r = Math.pow(Math.random(), 1.5) * 1.0;
+      const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
+      const lum = 0.9 - r*0.3;
+      const x0 = r*Math.sin(th)*Math.cos(ph);
+      const y0 = r*Math.cos(th)*0.7;
+      const z0 = r*Math.sin(th)*Math.sin(ph);
+      place(x0, y0*cosI - z0*sinI, y0*sinI + z0*cosI,
+        lum, lum*0.9, lum*0.65, 1.4+Math.random()*1.2);
+    }
+
+    // Two arms (less winding than Milky Way)
+    for (let i = 0; i < armN; i++) {
+      const arm = i % 2;
+      const armOff = arm * Math.PI;
+      const r = 0.5 + Math.pow(Math.random(), 0.55) * (R - 0.5);
+      const angle = armOff + (r-0.5) * spin + (Math.random()-0.5)*0.4;
+      const spread = 0.1 + r*0.04;
+      const x0 = Math.cos(angle)*r + (Math.random()-0.5)*spread;
+      const y0 = (Math.random()-0.5)*0.1*(r/R);
+      const z0 = Math.sin(angle)*r + (Math.random()-0.5)*spread;
+      const t = r / R;
+      const bl = 0.5 + t*0.4;
+      place(x0, y0*cosI - z0*sinI, y0*sinI + z0*cosI,
+        0.6*(1-t)+0.2, 0.55*(1-t)+0.35*t, bl,
+        0.5+Math.random()*0.7);
+    }
+
+    // Faint extended disk
+    for (let i = 0; i < diskN; i++) {
+      const r = Math.pow(Math.random(), 0.35) * R;
+      const a = Math.random()*Math.PI*2;
+      const y0 = (Math.random()-0.5)*0.08;
+      const z0 = Math.sin(a)*r;
+      place(Math.cos(a)*r, y0*cosI - z0*sinI, y0*sinI + z0*cosI,
+        0.18+Math.random()*0.1, 0.15+Math.random()*0.1, 0.28+Math.random()*0.15,
+        0.25+Math.random()*0.3);
+    }
+
+    // Two dwarf satellites (M32, M110)
+    const satellites = [[1.8, 0.3, -0.15], [-2.2, -0.2, 0.12]];
+    for (const [sx, sy, sz] of satellites) {
+      const n = Math.floor(count * 0.04);
+      for (let i = 0; i < n && idx < count; i++) {
+        const r = Math.pow(Math.random(), 2) * 0.25;
+        const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
+        place(sx + r*Math.sin(th)*Math.cos(ph), sy + r*Math.cos(th), sz + r*Math.sin(th)*Math.sin(ph),
+          0.8+Math.random()*0.15, 0.75+Math.random()*0.1, 0.55+Math.random()*0.1,
+          0.6+Math.random()*0.7);
+      }
+    }
+
+  } else if (pattern === 2) {
+    // ── Sombrero M104 — edge-on, massive bulge + dust lane ──
+    const R = 3.2;
+    const bulgeN = Math.floor(count * 0.40);
+    const diskN  = Math.floor(count * 0.45);
+    const haloN  = count - bulgeN - diskN;
+
+    // Massive spheroidal bulge (dominates Sombrero)
+    for (let i = 0; i < bulgeN; i++) {
+      const r = Math.pow(Math.random(), 1.5) * 1.4;
+      const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
+      const lum = Math.max(0, 0.95 - r*0.4);
+      place(r*Math.sin(th)*Math.cos(ph)*1.2, r*Math.cos(th), r*Math.sin(th)*Math.sin(ph)*1.2,
+        lum, lum*0.88, lum*0.60, 0.8+Math.random()*1.2);
+    }
+
+    // Thin edge-on disk — with gap for dust lane
+    for (let i = 0; i < diskN; i++) {
+      const x = (Math.random()-0.5) * 2 * R;
+      const z = (Math.random()-0.5) * 0.08 * Math.exp(-Math.abs(x)/R*1.5);
+      // Dust lane: dark strip near y=0
+      const dustLane = Math.abs(z) < 0.012;
+      if (dustLane && Math.random() < 0.85) continue; // mostly empty dust lane
+      const lum = 0.5 + Math.random()*0.35;
+      const t = Math.abs(x)/R;
+      place(x, z, (Math.random()-0.5)*0.15*Math.exp(-t*2),
+        dustLane ? 0.08 : lum*0.9,
+        dustLane ? 0.05 : lum*0.82,
+        dustLane ? 0.03 : lum*0.55,
+        0.4+Math.random()*0.5);
+    }
+
+    // Faint stellar halo
+    for (let i = 0; i < haloN; i++) {
+      const r = 1.5 + Math.pow(Math.random(), 2) * (R - 1.5);
+      const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
+      place(r*Math.sin(th)*Math.cos(ph), r*Math.cos(th)*0.3, r*Math.sin(th)*Math.sin(ph),
+        0.2+Math.random()*0.1, 0.18+Math.random()*0.08, 0.28+Math.random()*0.1,
+        0.2+Math.random()*0.25);
+    }
+
+  } else if (pattern === 3) {
+    // ── Whirlpool M51 — grand design spiral + companion NGC 5194 ──
+    const R = 2.8, spin = 2.0;
+    const bulgeN = Math.floor(count * 0.12);
+    const armN   = Math.floor(count * 0.55);
+    const diskN  = Math.floor(count * 0.18);
+    const compN  = count - bulgeN - armN - diskN; // companion galaxy
+
+    // Main galaxy bulge
+    for (let i = 0; i < bulgeN; i++) {
+      const r = Math.pow(Math.random(), 2) * 0.5;
+      const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
+      const lum = 0.9 - r;
+      place(r*Math.sin(th)*Math.cos(ph), r*Math.cos(th)*0.5, r*Math.sin(th)*Math.sin(ph),
+        lum, lum*0.85, lum*0.55, 1.2+Math.random()*1.0);
+    }
+
+    // Two prominent arms — very well-defined in M51
+    for (let i = 0; i < armN; i++) {
+      const arm = i % 2;
+      const armOff = arm * Math.PI;
+      const r = 0.4 + Math.pow(Math.random(), 0.5) * (R - 0.4);
+      const angle = armOff + (r - 0.4) * spin + (Math.random()-0.5)*0.3;
+      const spread = 0.07 + r*0.035;
+      const t = r / R;
+      // Vivid blue star-forming knots
+      const isKnot = Math.random() < 0.12;
+      place(Math.cos(angle)*r + (Math.random()-0.5)*spread,
+        (Math.random()-0.5)*0.1*(1-t),
+        Math.sin(angle)*r + (Math.random()-0.5)*spread,
+        isKnot ? 0.2 : 0.5*(1-t)+0.1, isKnot ? 0.6 : 0.5*(1-t)+0.3*t, isKnot ? 1.0 : 0.4+t*0.55,
+        isKnot ? 1.8 : 0.5+Math.random()*0.6);
+    }
+
+    // Disk
+    for (let i = 0; i < diskN; i++) {
+      const r = Math.pow(Math.random(), 0.45) * R * 0.9;
+      const a = Math.random()*Math.PI*2;
+      place(Math.cos(a)*r, (Math.random()-0.5)*0.08, Math.sin(a)*r,
+        0.15+Math.random()*0.1, 0.15+Math.random()*0.1, 0.25+Math.random()*0.15, 0.3+Math.random()*0.3);
+    }
+
+    // Companion galaxy NGC 5194 (upper right, connected by tidal bridge)
+    const cx = 2.2, cz = 1.8;
+    for (let i = 0; i < compN && idx < count; i++) {
+      const isBridge = i < compN * 0.25;
+      if (isBridge) {
+        // Tidal bridge connecting both galaxies
+        const bt = Math.random();
+        const bx = bt * cx + (Math.random()-0.5)*0.3;
+        const bz = bt * cz + (Math.random()-0.5)*0.3;
+        place(bx, (Math.random()-0.5)*0.15, bz,
+          0.25, 0.3, 0.45, 0.3+Math.random()*0.3);
+      } else {
+        // Compact companion elliptical
+        const r = Math.pow(Math.random(), 1.8) * 0.6;
+        const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
+        const lum = 0.75 - r*0.4;
+        place(cx + r*Math.sin(th)*Math.cos(ph)*0.7, r*Math.cos(th)*0.5, cz + r*Math.sin(th)*Math.sin(ph)*0.7,
+          lum, lum*0.82, lum*0.55, 0.6+Math.random()*0.7);
+      }
+    }
+
+  } else {
+    // ── Large Magellanic Cloud — irregular, bar + star-forming regions ──
+    const barN  = Math.floor(count * 0.35);
+    const scatN = Math.floor(count * 0.40);
+    const hiiN  = count - barN - scatN;
+
+    // Irregular off-center bar (tilted)
+    for (let i = 0; i < barN; i++) {
+      const t = (Math.random()-0.5) * 3.5;
+      const angle = 0.5; // bar position angle ~30°
+      const spread = (0.3 + Math.random()*0.5) * (1 - Math.abs(t)/2);
+      const x = t*Math.cos(angle) + (Math.random()-0.5)*spread;
+      const z = t*Math.sin(angle) + (Math.random()-0.5)*spread;
+      const y = (Math.random()-0.5)*0.12;
+      const lum = 0.5 + Math.random()*0.35;
+      place(x, y, z, lum*0.9, lum*0.8, lum*0.55, 0.5+Math.random()*0.7);
+    }
+
+    // Scattered field stars — irregular, asymmetric distribution
+    for (let i = 0; i < scatN; i++) {
+      // Offset center (asymmetric cloud)
+      const cx = -0.4, cz = 0.3;
+      const r = Math.pow(Math.random(), 0.4) * 2.8;
+      const a = Math.random()*Math.PI*2;
+      const asym = 1.0 + 0.5*Math.cos(a); // asymmetric weighting
+      place(cx + Math.cos(a)*r*asym + (Math.random()-0.5)*0.3,
+        (Math.random()-0.5)*0.18,
+        cz + Math.sin(a)*r*0.75 + (Math.random()-0.5)*0.3,
+        0.4+Math.random()*0.3, 0.35+Math.random()*0.25, 0.45+Math.random()*0.3,
+        0.3+Math.random()*0.5);
+    }
+
+    // HII star-forming regions — vivid blue/pink clumps (30 Doradus etc.)
+    const hiiCenters = [[-0.3, 0, 0.5],[0.5, 0, -0.1],[0.1, 0, 1.0],[-0.8, 0, -0.4],[0.8, 0, 0.7]];
+    const nPerHII = Math.floor(hiiN / hiiCenters.length);
+    for (const [hx, hy, hz] of hiiCenters) {
+      for (let i = 0; i < nPerHII && idx < count; i++) {
+        const r = Math.pow(Math.random(), 1.5) * 0.3;
+        const a = Math.random()*Math.PI*2;
+        const isBlue = Math.random() < 0.6;
+        place(hx + Math.cos(a)*r, hy + (Math.random()-0.5)*0.05, hz + Math.sin(a)*r,
+          isBlue ? 0.15 : 0.9, isBlue ? 0.45 : 0.2, isBlue ? 1.0 : 0.6,
+          1.2+Math.random()*1.2);
+      }
+    }
+  }
+
+  // Fill any remaining slots
+  while (idx < count) {
+    const i3 = idx * 3;
+    positions[i3] = (Math.random()-0.5)*0.5;
+    positions[i3+1] = (Math.random()-0.5)*0.5;
+    positions[i3+2] = (Math.random()-0.5)*0.5;
+    colors[i3] = 0.1; colors[i3+1] = 0.1; colors[i3+2] = 0.15;
+    sizes[idx] = 0.2;
+    idx++;
+  }
+
+  return { positions, colors, sizes };
+}
+
+function generateDNA(count) {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const height = 6, radius = 1.2, turns = 4;
+
+  for (let i = 0; i < count; i++) {
+    const i3 = i * 3;
+    const t = i / count;
+    const y = (t - 0.5) * height;
+    const angle = t * Math.PI * 2 * turns;
+
+    if (i % 10 < 4) {
+      positions[i3] = Math.cos(angle) * radius + (Math.random() - 0.5) * 0.06;
+      positions[i3+1] = y + (Math.random() - 0.5) * 0.06;
+      positions[i3+2] = Math.sin(angle) * radius + (Math.random() - 0.5) * 0.06;
+      colors[i3] = 0.2; colors[i3+1] = 0.7; colors[i3+2] = 1.0;
+      sizes[i] = 1.0 + Math.random() * 0.8;
+    } else if (i % 10 < 8) {
+      positions[i3] = Math.cos(angle + Math.PI) * radius + (Math.random() - 0.5) * 0.06;
+      positions[i3+1] = y + (Math.random() - 0.5) * 0.06;
+      positions[i3+2] = Math.sin(angle + Math.PI) * radius + (Math.random() - 0.5) * 0.06;
+      colors[i3] = 1.0; colors[i3+1] = 0.2; colors[i3+2] = 0.5;
+      sizes[i] = 1.0 + Math.random() * 0.8;
+    } else {
+      const rt = Math.random();
+      const x1 = Math.cos(angle) * radius, z1 = Math.sin(angle) * radius;
+      const x2 = Math.cos(angle + Math.PI) * radius, z2 = Math.sin(angle + Math.PI) * radius;
+      positions[i3] = x1 + (x2 - x1) * rt;
+      positions[i3+1] = y;
+      positions[i3+2] = z1 + (z2 - z1) * rt;
+      colors[i3] = 0.4; colors[i3+1] = 1.0; colors[i3+2] = 0.4;
+      sizes[i] = 0.4 + Math.random() * 0.4;
+    }
+  }
+  return { positions, colors, sizes };
+}
+
+function generateTorus(count) {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const R = 2.0, r = 0.7;
+  for (let i = 0; i < count; i++) {
+    const i3 = i * 3;
+    const u = Math.random() * Math.PI * 2, v = Math.random() * Math.PI * 2;
+    const n = (Math.random() - 0.5) * 0.04;
+    positions[i3] = (R + (r + n) * Math.cos(v)) * Math.cos(u);
+    positions[i3+1] = (r + n) * Math.sin(v);
+    positions[i3+2] = (R + (r + n) * Math.cos(v)) * Math.sin(u);
+    colors[i3] = 0.5 + Math.sin(u*2)*0.5; colors[i3+1] = 0.5 + Math.sin(v*3)*0.5; colors[i3+2] = 0.8;
+    sizes[i] = 0.6 + Math.random();
+  }
+  return { positions, colors, sizes };
+}
+
+function generateSphere(count) {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    const i3 = i * 3;
+    const theta = Math.acos(2 * Math.random() - 1);
+    const phi = Math.random() * Math.PI * 2;
+    const r = 2.0 + (Math.random() - 0.5) * 0.04;
+    positions[i3] = r * Math.sin(theta) * Math.cos(phi);
+    positions[i3+1] = r * Math.sin(theta) * Math.sin(phi);
+    positions[i3+2] = r * Math.cos(theta);
+    colors[i3] = 0.5+Math.sin(theta*3)*0.5; colors[i3+1] = 0.5+Math.cos(phi*2)*0.5; colors[i3+2] = 0.8;
+    sizes[i] = 0.6 + Math.random();
+  }
+  return { positions, colors, sizes };
+}
+
+function generateFractalTree(count) {
+  const pts = [], cols = [], szs = [];
+  function branch(x, y, z, dx, dy, dz, depth, maxD) {
+    if (depth > maxD || pts.length / 3 >= count) return;
+    const steps = Math.max(8, Math.floor(60 / (depth + 1)));
+    const len = 1.5 / (depth + 1);
+    for (let i = 0; i < steps && pts.length / 3 < count; i++) {
+      const t = i / steps, n = 0.015 * depth;
+      pts.push(x+dx*t*len+(Math.random()-0.5)*n, y+dy*t*len+(Math.random()-0.5)*n, z+dz*t*len+(Math.random()-0.5)*n);
+      cols.push(0.15+depth*0.08, 0.3+(1-depth/maxD)*0.7, 0.1);
+      szs.push(1.5 - depth*0.15 + Math.random()*0.3);
+    }
+    const nx=x+dx*len, ny=y+dy*len, nz=z+dz*len, sp=0.6;
+    for (let b = 0; b < (depth < 2 ? 3 : 2); b++) {
+      const a = (b/(depth<2?3:2))*Math.PI*2+Math.random()*0.5;
+      const ndx=dx*0.6+Math.cos(a)*sp, ndy=dy*0.8+0.2, ndz=dz*0.6+Math.sin(a)*sp;
+      const m = Math.sqrt(ndx*ndx+ndy*ndy+ndz*ndz);
+      branch(nx,ny,nz,ndx/m,ndy/m,ndz/m,depth+1,maxD);
+    }
+  }
+  branch(0,-2,0,0,1,0,0,6);
+  while (pts.length/3 < count) {
+    const idx = Math.floor(Math.random()*(pts.length/3))*3;
+    pts.push(pts[idx]+(Math.random()-0.5)*0.25, pts[idx+1]+(Math.random()-0.5)*0.25, pts[idx+2]+(Math.random()-0.5)*0.25);
+    cols.push(0.05, 0.6+Math.random()*0.4, 0.15);
+    szs.push(0.3+Math.random()*0.6);
+  }
+  return { positions: new Float32Array(pts.slice(0,count*3)), colors: new Float32Array(cols.slice(0,count*3)), sizes: new Float32Array(szs.slice(0,count)) };
+}
+
+// ── NEW GENERATORS ─────────────────────────────────
+
+// ── Earth: Natural Earth 110m bitmap (1° resolution) ──
+const LAND_B64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADf//8AAf///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB////D//////n/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/gf/x////////wAAAAAbgAAB4AAAAAAPwAAAAAAAAAAAAAAAAAAAAAAAAAAAf//8A///////+AAAAB/ngAAAAAAAAAAH8AAAAAAAAAAAAAAAAAAAAAAAAcH3Hv/5////////8AAAAA/gAAAAAAAAAAAAD4AAAAAAAAAAAAAAAAAAAAAAcIAAQP/AH///////+AAAAAPCAAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAAAAADwDAc+f+AP///////4AAAAAAAAAAAAAB4AAAAB/8AAAAAAAAAAAAAAAAAAAAAH9wc374AAAf/////8AAAAAAAAAAAAH4AAAA////AAAB/gAAAAAAAAAAAAAAAAwAAA/QAAAH/////8AAAAAAAAAAAAOAAAAP///wAAAAAAAAAAAAAAAAAAAAP8AYe+c3AAAD/////4AAAAAAAAAAAA4AAAH////++HgAOAAAAAAAAAAAAAAAfv+4+w/4gAAB/////wAAAAAAAAAAADwAHgH///////4AfgAAAAAgHwAAAAAAPf/4O4//9AAB/////wAAAAAAAAAAADwAPb////////4m//gAAAAAAAf+AAAAAA/+A8f//4AB////8gAAAAAAA/gAAAAAfv/////////////8AAAAAB///+H//H/+PeDwf+AA3////AAAAAAA//4AAAA8fv///////////////P8f/gAAAAAAAA/H9wMH4D//wAAAP//////8AAAP/84AYIAAAAAAAAAAAAAAAAAD/8AAAAAAAAAAAAIHmAP/AAAH///////wAAABzAAAAYAAAAAAAAAAAAAAAAABH7AAAAAAAAAAAAAf8AD/gAAf///////gAAGBwAAAAgAAAAAAAAAAAAAAAAAgPAAAAAAAAAAAAAF/8Dn/gAP//gD////ADgB8AAAAAAAAAAAAAAAAAAAAAAAAgEf///////////zw7/AAP/gAAP4AAAB/4/+f//////////////////////8AMAf//////////+DIA/gAH/gAAAAAAAH/z/////////////////////////+AAH///////////8AwgOAAD+AAAAAAAA//H/////////////////////////6AAP///////////wAA/AAAB+AAAAAAAB/+H//////////////////////nP+AAAH//z////////wAA/wAAAOAAAAAAAB//D/////////////////////+A/4AAAA/zAD///////gAA/4wAAAAAAAAAAB//Ab///////////////////+eDgAAAAABwAA///////4AA/94AAAAAAAAAYA5+A///////////////////4AAHAAAAAADcAAD//////4AAf/8AAAAAAAAA8AC+C///////////////////wAAfgAAAAAMAAAA///////wAf/8AAAAAAAAA4AO8H///////////////////AAA/gAAAABgAAAA///////8A///AAAAAAAAA8ANwH//////////////////8AAB/AAAAAEAAAAAf///////z///4AAAAAAAHOAEDv//////////////////+AAA+AAAAAAAAAABH///////x///8AAAAAAAHHAf/////////////////////6AA8AAAAAAAAAAAD///////x///8AAAAAAAGPz//////////////////////6AAwAAAAAAAAAAAD///////9///6AAAAAAAAPj//////////////////////6AAQAAAAAAAAAAAC///////////EAAAAAAAAYf//////////////////////7AAAAAAAAAAAAAABv////////+MNAAAAAAAAD///////////////////////zAAAAAAAAAAAAAAAH////////7gfgAAAAAAAf///////////////////////yAAAAAAAAAAAAAAAL/////////gCgAAAAAAAH///////////////////////iAAAAAAAAAAAAAAAP/////////pAAAAAAAAAD/////uP/x//////////////DAAAAAAAAAAAAAAAP/////////+AAAAAAAAAB//v//Gf/B/////////////+AAAAAAAAAAAAAAAAP////////8wAAAAAAAAAB//H/+AP+P/////////////8CAAAAAAAAAAAAAAAP////////wAAAAAAAAADj/jz/8AD/H/////////////4HgAAAAAAAAAAAAAAP////////gAAAAAAAAAH/4Bw/8AA/B////////////+APAAAAAAAAAAAAAAAP////////gAAAAAAAAAH/wA8f8Ph/g////////////8AAAAAAAAAAAAAAAAAP///////8AAAAAAAAAAH/gMHfJ///x///////////v4AMAAAAAAAAAAAAAAAP///////8AAAAAAAAAAH/AMCOP///h//////////+JwAMAAAAAAAAAAAAAAAH///////4AAAAAAAAAAH/AAAHH///g//////////8BwAIAAAAAAAAAAAAAAAH///////wAAAAAAAAAAH+AAYGH///w//////////+w4A4AAAAAAAAAAAAAAAD///////wAAAAAAAAAAAgf+ACBs//////////////g4D4AAAAAAAAAAAAAAAB///////wAAAAAAAAAAAj/+AAAA//////////////AYf4AAAAAAAAAAAAAAAA///////gAAAAAAAAAAB//8AAAA//////////////Ah2AAAAAAAAAAAAAAAAAP/////+AAAAAAAAAAAD//+AAAB//////////////gDwAAAAAAAAAAAAAAAAAH/////8AAAAAAAAAAAH///4GAB//////////////gDAAAAAAAAAAAAAAAAAAG/////4AAAAAAAAAAAP///8P4h//////////////wCAAAAAAAAAAAAAAAAAACf////4AAAAAAAAAAAP////v////////////////gAAAAAAAAAAAAAAAAAAABP//hgYAAAAAAAAAAAP//////3//P///////////wAAAAAAAAAAAAAAAAAAAAv//AAYAAAAAAAAAAAf//////9//H///////////wAAAAAAAAAAAAAAAAAAAB3/+AAcAAAAAAAAAAB///////4//h///////////gAAAAAAAAAAAAAAAAAAAAR/+AANAAAAAAAAAAD///////8//wH//////////AAAAAAAAAAAAAAAAAAAAAJ/+AAEAAAAAAAAAAH///////+f/0B/////////+AAAAAAAAAAAAAAAAAAAAAI/8AAAAAAAAAAAAAH///////+f/44Af///////+QAAAAAAAAAAAAAAAAAAAAAf8AAAAAAAAAAAAAP////////H//+AP///////4gAAAAAAAAAAAAAAAAAAAAAP8AAuAAAAAAAAAAP////////H///AD///v///ggAAAAAAAAAAAAAAAAAAAAAH+AABgAAAAAAAAAf////////n//+AD//4P//YAAAAAAAAAAAAAAAAAAAAAAAP+A4AYAAAAAAAAAP////////j//+AAf/4H/+AAAAAAAAAAAAAAAAgAAAAAAAH/B4ABwAAAAAAAAP////////h//8AAf/gD/8YAAAAAAAAAAAAAAAAAAAAAAAD/nwAD9AAAAAAAAP////////x//4AAf/AD/8QAAAAAAAAAAAAAAAAAAAAAAAAf/wAAAAAAAAAAAP////////4//gAAf+AD/+AAwAAAAAAAAAAAAAAAAAAAAAAH/wAAAAAAAAAAAf////////4f+AAAf8AD//AAwAAAAAAAAAAAAAAAAAAAAAAAH/AAAAAAAAAAAf////////8f8AAAPwAAP/gAwAAAAAAAAAAAAAAAAAAAAAAAD/gAAAAAAAAAAf////////+fgAAAPwAAP/gAwAAAAAAAAAAAAAAAAAAAAAAAA/AAAAAAAAAAAf/////////eAAAAHwAAP/gAMAAAAAAAAAAAAAAAAAAAAAAAAHgAAAAAAAAAAf/////////gAAAAHwAAM/gACAAAAAAAAAAAAAAAAAAAAAAAADABAAAAAAAAAP/////////gYAAADwAAEfgAJAAAAAAAAAAAAAAAAAAAAAAAADgPfOAAAAAAAH/////////34AAADwAAIOABAAAAAAAAAAAAAAAAAAAAAAAAAAyPf+AAAAAAAD//////////4AAADoAAIEACBAAAAAAAAAAAAAAAAAAAAAAAAA8///AAAAAAAB//////////wAAABIAAMAAAFAAAAAAAAAAAAAAAAAAAAAAAAAE///gAAAAAAB//////////wAAAAMAAEAAALgAAAAAAAAAAAAAAAAAAAAAAAAAf//wAAAAAAAf/////////gAAAAMAADAAMCAAAAAAAAAAAAAAAAAAAAAAAAAA////gAAAAAAP/B///////gAAAAAAADgAOAAAAAAAAAAAAAAAAAAAAAAAAAAAf///wAAAAAACAA///////AAAAAAAAxgA+AAAAAAAAAAAAAAAAAAAAAAAAAAAf///4AAAAAAAAAD/////+AAAAAAAAZgB4AAAAAAAAAAAAAAAAAAAAAAAAAAB////4AAAAAAAAAD/////8AAAAAAAAMwH8AAAAAAAAAAAAAAAAAAAAAAAAAAB////8AAAAAAAAAH/////4AAAAAAAAHQf8AIAAAAAAAAAAAAAAAAAAAAAAAAD////8AAAAAAAAAH/////gAAAAAAAAHgf88IAAAAAAAAAAAAAAAAAAAAAAAAD////+AAAAAAAAAH/////AAAAAAAAADwf8AAgAAAAAAAAAAAAAAAAAAAAAAAH/////4AAAAAAAAH/////AAAAAAAAABwP5wBwAAAAAAAAAAAAAAAAAAAAAAAH/////6AAAAAAAAD////+AAAAAAAAAB8P5wATwAAAAAAAAAAAAAAAAAAAAAAD//////4AAAAAAAB////8AAAAAAAAAA8AxQif+AAAAAAAAAAAAAAAAAAAAAAH//////8AAAAAAAB////4AAAAAAAAAAcAAIAD/gAAAAAAAAAAAAAAAAAAAAAH///////gAAAAAAA////4AAAAAAAAAAMAAIAI/ywAAAAAAAAAAAAAAAAAAAAH///////gAAAAAAA////4AAAAAAAAAADgAAAI/8BAAAAAAAAAAAAAAAAAAAAD///////gAAAAAAAf///4AAAAAAAAAAB+AAAA/4AIAAAAAAAAAAAAAAAAAAAB///////gAAAAAAAf///4AAAAAAAAAAAAmogAOMAAAAAAAAAAAAAAAAAAAAAB///////AAAAAAAAf///8AAAAAAAAAAAABCAAAGADAAAAAAAAAAAAAAAAAAAA///////AAAAAAAAf///8AAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAf/////+AAAAAAAAP///8AAAAAAAAAAAAAAAgCAAAAAAAAAAAAAAAAAAAAAAAf/////8AAAAAAAAf///+AQAAAAAAAAAAAAB+CAAAAAAAAAAAAAAAAAAAAAAAP/////4AAAAAAAAf///+AQAAAAAAAAAAAAD8DAAAAAAAAAAAAAAAAAAAAAAAP/////4AAAAAAAA////+AwAAAAAAAAAAAA38DgAAAAAAAAAAAAAAAAAAAAAAH/////4AAAAAAAA////8BwAAAAAAAAAAAD/8DgAAAAA/////////////////+AAAAAH////////AAAADwP///////////8AA4P//+/+AAAAAAAAAAAAAAAAAAf////4AAAAAAAA////wPgAAAAAAAAAAAP//3wAAAACAAAAAAAAAAAAAAAAAAP////wAAAAAAAA////APgAAAAAAAAAAAP///wAAAAAAAAAAAAAAAAAAAAAAAP////wAAAAAAAAf//+APgAAAAAAAAAAAf///4AAAAAAAAAAAAAAAAAAAAAAAP////wAAAAAAAAf//+APgAAAAAAAAAAD////+AAIAAAAAAAAAAAAAAAAAAAAP////gAAAAAAAAP//+AfAAAAAAAAAAAf////+AAEAAAAAAAAAAAAAAAAAAAAP////AAAAAAAAAP///AfAAAAAAAAAAA//////AAAAAAAAAAAAAAAAAAAAAAAP///4AAAAAAAAAP//+APAAAAAAAAAAA//////gAAAAAAAAAAAAAAAAAAAAAAf///gAAAAAAAAAH//+AOAAAAAAAAAAB//////wAAAAAAAAAAAAAAAAAAAAAAf///AAAAAAAAAAH//4AEAAAAAAAAAAA//////4AAAAAAAAAAAAAAAAAAAAAAf//+AAAAAAAAAAH//4AAAAAAAAAAAAB//////4AAAAAAAAAAAAAAAAAAAAAAf//+AAAAAAAAAAH//4AAAAAAAAAAAAA//////4AAAAAAAAAAAAAAAAAAAAAAf//+AAAAAAAAAAD//wAAAAAAAAAAAAAf/////8AAAAAAAAAAAAAAAAAAAAAAf//8AAAAAAAAAAB//gAAAAAAAAAAAAAf/////4AAAAAAAAAAAAAAAAAAAAAA///8AAAAAAAAAAB//gAAAAAAAAAAAAAf/////4AAAAAAAAAAAAAAAAAAAAAA///4AAAAAAAAAAA//AAAAAAAAAAAAAAP/////4AAAAAAAAAAAAAAAAAAAAAAf//wAAAAAAAAAAA/+AAAAAAAAAAAAAAP/AP//wAAAAAAAAAAAAAAAAAAAAAA///gAAAAAAAAAAA/4AAAAAAAAAAAAAAf8AG//gAAAAAAAAAAAAAAAAAAAAAA//3AAAAAAAAAAAAYAAAAAAAAAAAAAAAOAAF//gAAAAAAAAAAAAAAAAAAAAAB//4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//AAABAAAAAAAAAAAAAAAAAAB//4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/AAAAgAAAAAAAAAAAAAAAAAD//4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/AAAAQAAAAAAAAAAAAAAAAAB//gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABYAAAAcAAAAAAAAAAAAAAAAAB/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAAAAD/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAD/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcAAADQAAAAAAAAAAAAAAAAAD/4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcAAAHAAAAAAAAAAAAAAAAAAB/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAOAAAAAAAAAAAAAAAAAAD/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAAAAAH+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4AAAAAAAAAAAAAAAAAAH+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAAAAAH/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP+AAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH4BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAAAAAAAAAAAH4AAAAAAB4HgAD8AAAAAAAAAAAAAAAAAAAAAAAAADgAAAAAAAAAAAAAAAAAA//AAAD//////////wAAAAAAAAAAAAAAAAAAAAAAADgAAAAAAAAAAAAAAAAAf///4Af///////////AAAAAAAAAAAAAAAAAAAAAAAz4AAAAAAAAAAAAAAAPz////8B/////////////wAAAAAAAAAAAAAAAAAAAAA78AAAAAAAAAAA8/8///////wf/////////////+AAAAAAAAAAAAAAAAAAAAH9+AAAAAAAAZ////////////w////////////////4AAAAAAAAAAAAAAAAAAAB+AAAAAAAB//////////////////////////////4AAAAAAAAABmAAB8f+HB/+AAAAAAAP//////////////////////////////gAAAAAAAAP/c/oAf/////4AAAAAAAP/////////////////////////////8AAAAAAAD/////////////gAAAAAAB//////////////////////////////wAAAAAAAD////////////wAAAAAAP///////////////////////////////wAAAAAD/////////////4AAAAAAD////////////////////////////////wAAAADh/////////////AAAAB8A/////////////////////////////////+AAAAA4Af///////////gAAAH+AA///////////////////////////////+AAAAAAAAH///////////+A/A/wAA///////////////////////////////8AAAAAAAf//////////////gAAAf////////////////////////////////+AAAAAAAH///////////////h////////////////////////////////////wAAAAAAP/////////////////////////////////////////////////////gA+/gAAH///////////////////////////////////////////////gAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const _landRaw = atob(LAND_B64);
+const _landBitmap = new Uint8Array(_landRaw.length);
+for (let i = 0; i < _landRaw.length; i++) _landBitmap[i] = _landRaw.charCodeAt(i);
+function bitmapIsLand(lat, lng) {
+  const col = ((Math.floor(lng + 180) % 360) + 360) % 360;
+  const row = Math.floor(90 - lat);
+  if (row < 0 || row >= 180) return false;
+  const idx = row * 360 + col;
+  return ((_landBitmap[idx >> 3] >> (7 - (idx & 7))) & 1) === 1;
+}
+
+function generateEarth(count) {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const R = 2.0;
+  let idx = 0;
+
+  function latLngToPos(lat, lng, r) {
+    const la = lat * Math.PI / 180, lo = lng * Math.PI / 180;
+    return [r * Math.cos(la) * Math.cos(lo), r * Math.sin(la), r * Math.cos(la) * Math.sin(lo)];
+  }
+
+  // Detect coastline: land cell adjacent to ocean cell
+  function isCoastline(lat, lng) {
+    if (!bitmapIsLand(lat, lng)) return false;
+    for (const [dl, dn] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      if (!bitmapIsLand(lat+dl, lng+dn)) return true;
+    }
+    return false;
+  }
+
+  const coastCount = Math.floor(count * 0.12);
+  const landCount = Math.floor(count * 0.33);
+  const oceanCount = count - coastCount - landCount;
+
+  // 1) Coastline points — dense along land/ocean boundary
+  let attempts = 0;
+  while (idx < coastCount && attempts < coastCount * 20) {
+    attempts++;
+    const lat = (Math.random() - 0.5) * 170;
+    const lng = (Math.random() - 0.5) * 360;
+    if (!isCoastline(lat, lng)) continue;
+    const jlat = lat + (Math.random()-0.5)*1.0;
+    const jlng = lng + (Math.random()-0.5)*1.0;
+    const p = latLngToPos(jlat, jlng, R + (Math.random()-0.5)*0.01);
+    const i3 = idx * 3;
+    positions[i3] = p[0]; positions[i3+1] = p[1]; positions[i3+2] = p[2];
+    colors[i3] = 0.6; colors[i3+1] = 0.55; colors[i3+2] = 0.3;
+    sizes[idx] = 0.5 + Math.random() * 0.4;
+    idx++;
+  }
+
+  // 2) Land fill with biome coloring
+  attempts = 0;
+  while (idx < coastCount + landCount && attempts < landCount * 10) {
+    attempts++;
+    const lat = (Math.random() - 0.5) * 170;
+    const lng = (Math.random() - 0.5) * 360;
+    if (!bitmapIsLand(lat, lng)) continue;
+    const p = latLngToPos(lat + (Math.random()-0.5)*0.5, lng + (Math.random()-0.5)*0.5, R + (Math.random()-0.5)*0.015);
+    const i3 = idx * 3;
+    positions[i3] = p[0]; positions[i3+1] = p[1]; positions[i3+2] = p[2];
+    const absLat = Math.abs(lat);
+    if (absLat > 65) {
+      colors[i3] = 0.85; colors[i3+1] = 0.9; colors[i3+2] = 0.95;
+    } else if (absLat > 55) {
+      colors[i3] = 0.2; colors[i3+1] = 0.35+Math.random()*0.1; colors[i3+2] = 0.15;
+    } else if (absLat < 25 && lng > -20 && lng < 55) {
+      colors[i3] = 0.6+Math.random()*0.15; colors[i3+1] = 0.45+Math.random()*0.1; colors[i3+2] = 0.2;
+    } else if (absLat < 20) {
+      colors[i3] = 0.02; colors[i3+1] = 0.35+Math.random()*0.2; colors[i3+2] = 0.02;
+    } else if (absLat < 40) {
+      colors[i3] = 0.1; colors[i3+1] = 0.45+Math.random()*0.25; colors[i3+2] = 0.05;
+    } else {
+      colors[i3] = 0.15; colors[i3+1] = 0.38+Math.random()*0.15; colors[i3+2] = 0.1;
+    }
+    sizes[idx] = 0.4 + Math.random()*0.5;
+    idx++;
+  }
+
+  // 3) Ocean
+  while (idx < count) {
+    const theta = Math.acos(2*Math.random()-1);
+    const phi = Math.random()*Math.PI*2;
+    const lat = (Math.PI/2 - theta) * 180 / Math.PI;
+    const lng = (phi - Math.PI) * 180 / Math.PI;
+    if (bitmapIsLand(lat, lng)) { continue; }
+    const waveH = Math.sin(lat*0.1)*0.005 + Math.sin(lng*0.15)*0.005;
+    const r = R - 0.008 + waveH;
+    const i3 = idx * 3;
+    positions[i3]   = r * Math.sin(theta) * Math.cos(phi);
+    positions[i3+1] = r * Math.cos(theta);
+    positions[i3+2] = r * Math.sin(theta) * Math.sin(phi);
+    const absLat = Math.abs(lat);
+    const cn = Math.sin(lat*0.08 + lng*0.06)*0.5 + 0.5;
+    if (absLat > 65) {
+      colors[i3] = 0.55+cn*0.2; colors[i3+1] = 0.7+cn*0.15; colors[i3+2] = 0.85+cn*0.1;
+    } else if (absLat > 40) {
+      colors[i3] = 0.05; colors[i3+1] = 0.15+cn*0.15; colors[i3+2] = 0.45+cn*0.3;
+    } else if (absLat < 15) {
+      colors[i3] = 0.0; colors[i3+1] = 0.3+cn*0.2; colors[i3+2] = 0.55+cn*0.3;
+    } else {
+      colors[i3] = 0.03; colors[i3+1] = 0.18+cn*0.12; colors[i3+2] = 0.5+cn*0.25;
+    }
+    sizes[idx] = 0.35 + Math.random()*0.3;
+    idx++;
+  }
+  return { positions, colors, sizes };
+}
+
+function generateJellyfish(count) {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+
+  const bellCount = Math.floor(count * 0.4);
+  const tentacleCount = count - bellCount;
+  const tentacles = 10;
+
+  for (let i = 0; i < count; i++) {
+    const i3 = i * 3;
+
+    if (i < bellCount) {
+      // Bell — dome shape
+      const u = Math.random() * Math.PI * 2;
+      const v = Math.random() * Math.PI * 0.5; // half sphere
+      const r = 1.2 + (Math.random() - 0.5) * 0.05;
+      const bellR = r * Math.sin(v);
+
+      positions[i3]     = bellR * Math.cos(u);
+      positions[i3 + 1] = r * Math.cos(v) * 0.6 + 0.5; // flatten slightly
+      positions[i3 + 2] = bellR * Math.sin(u);
+
+      const brightness = 0.5 + Math.sin(v * 3) * 0.3;
+      colors[i3] = 0.8; colors[i3+1] = 0.2 + brightness * 0.3; colors[i3+2] = 1.0;
+      sizes[i] = 0.6 + (1 - v / (Math.PI*0.5)) * 1.0;
+    } else {
+      // Tentacles
+      const ti = (i - bellCount) % tentacles;
+      const t = ((i - bellCount) / tentacleCount); // 0-1 along tentacle
+      const baseAngle = (ti / tentacles) * Math.PI * 2;
+
+      const tentR = 0.8 + Math.sin(baseAngle * 3) * 0.2;
+      const x = Math.cos(baseAngle) * tentR * (1 - t * 0.3);
+      const y = -t * 3.0 + 0.2; // hang down
+      const z = Math.sin(baseAngle) * tentR * (1 - t * 0.3);
+
+      // Sinusoidal wave along tentacle
+      const wave = Math.sin(t * 8 + ti) * 0.3 * t;
+
+      positions[i3]     = x + wave + (Math.random()-0.5)*0.05;
+      positions[i3 + 1] = y + (Math.random()-0.5)*0.05;
+      positions[i3 + 2] = z + wave * 0.5 + (Math.random()-0.5)*0.05;
+
+      // Bioluminescent tips
+      const glow = Math.pow(t, 2);
+      colors[i3] = 0.5 + glow*0.5; colors[i3+1] = 0.1 + glow*0.3; colors[i3+2] = 0.8 + glow*0.2;
+      sizes[i] = 0.8 - t * 0.5 + Math.random() * 0.3;
+    }
+  }
+  return { positions, colors, sizes };
+}
+
+function generateWaves(count) {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+
+  const gridSize = Math.ceil(Math.sqrt(count));
+  const spread = 8;
+
+  for (let i = 0; i < count; i++) {
+    const i3 = i * 3;
+    const gx = (i % gridSize) / gridSize;
+    const gz = Math.floor(i / gridSize) / gridSize;
+
+    const x = (gx - 0.5) * spread;
+    const z = (gz - 0.5) * spread;
+
+    // Layered wave function
+    const y = Math.sin(x * 1.5) * 0.4
+            + Math.sin(z * 2.0) * 0.3
+            + Math.sin((x + z) * 1.0) * 0.2
+            + Math.sin(x * 3.0 + z * 1.5) * 0.1;
+
+    positions[i3]     = x;
+    positions[i3 + 1] = y;
+    positions[i3 + 2] = z;
+
+    // Depth coloring: crests bright, troughs dark
+    const t = (y + 1) / 2;
+    colors[i3] = t; colors[i3+1] = t; colors[i3+2] = t;
+    sizes[i] = 0.4 + t * 0.8;
+  }
+  return { positions, colors, sizes };
+}
+
+function generateGeodesic(count) {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const R = 2.0;
+
+  // Icosahedron vertices
+  const phi = (1 + Math.sqrt(5)) / 2;
+  const verts = [
+    [-1, phi, 0], [1, phi, 0], [-1, -phi, 0], [1, -phi, 0],
+    [0, -1, phi], [0, 1, phi], [0, -1, -phi], [0, 1, -phi],
+    [phi, 0, -1], [phi, 0, 1], [-phi, 0, -1], [-phi, 0, 1],
+  ].map(v => {
+    const m = Math.sqrt(v[0]**2+v[1]**2+v[2]**2);
+    return [v[0]/m*R, v[1]/m*R, v[2]/m*R];
+  });
+
+  // Icosahedron faces (20 triangles)
+  const faces = [
+    [0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],
+    [1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],
+    [3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],
+    [4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]
+  ];
+
+  // Collect edges
+  const edgeSet = new Set();
+  const edges = [];
+  for (const f of faces) {
+    for (let j = 0; j < 3; j++) {
+      const a = Math.min(f[j], f[(j+1)%3]);
+      const b = Math.max(f[j], f[(j+1)%3]);
+      const key = a + ',' + b;
+      if (!edgeSet.has(key)) {
+        edgeSet.add(key);
+        edges.push([a, b]);
+      }
+    }
+  }
+
+  // Subdivide each edge and place points
+  const edgePoints = Math.floor(count * 0.7 / edges.length);
+  let idx = 0;
+
+  for (const [a, b] of edges) {
+    const va = verts[a], vb = verts[b];
+    for (let j = 0; j < edgePoints && idx < count; j++) {
+      const t = j / edgePoints;
+      let x = va[0] + (vb[0]-va[0])*t;
+      let y = va[1] + (vb[1]-va[1])*t;
+      let z = va[2] + (vb[2]-va[2])*t;
+      // Project onto sphere
+      const m = Math.sqrt(x*x+y*y+z*z);
+      x = x/m*R; y = y/m*R; z = z/m*R;
+      // Small jitter
+      const n = 0.02;
+      const i3 = idx * 3;
+      positions[i3] = x+(Math.random()-0.5)*n;
+      positions[i3+1] = y+(Math.random()-0.5)*n;
+      positions[i3+2] = z+(Math.random()-0.5)*n;
+      colors[i3] = 0.6+t*0.4; colors[i3+1] = 0.6+t*0.4; colors[i3+2] = 0.8;
+      sizes[idx] = 0.8 + Math.random()*0.5;
+      idx++;
+    }
+  }
+
+  // Vertex glow points
+  for (const v of verts) {
+    for (let j = 0; j < 30 && idx < count; j++) {
+      const i3 = idx * 3;
+      positions[i3] = v[0]+(Math.random()-0.5)*0.08;
+      positions[i3+1] = v[1]+(Math.random()-0.5)*0.08;
+      positions[i3+2] = v[2]+(Math.random()-0.5)*0.08;
+      colors[i3] = 1.0; colors[i3+1] = 1.0; colors[i3+2] = 1.0;
+      sizes[idx] = 1.5 + Math.random();
+      idx++;
+    }
+  }
+
+  // Fill remaining with surface scatter
+  while (idx < count) {
+    const theta = Math.acos(2*Math.random()-1);
+    const p = Math.random()*Math.PI*2;
+    const i3 = idx * 3;
+    positions[i3] = R*Math.sin(theta)*Math.cos(p)+(Math.random()-0.5)*0.03;
+    positions[i3+1] = R*Math.sin(theta)*Math.sin(p)+(Math.random()-0.5)*0.03;
+    positions[i3+2] = R*Math.cos(theta)+(Math.random()-0.5)*0.03;
+    colors[i3] = 0.3; colors[i3+1] = 0.3; colors[i3+2] = 0.5;
+    sizes[idx] = 0.3+Math.random()*0.3;
+    idx++;
+  }
+  return { positions, colors, sizes };
+}
+
+// Sacred geometry sub-pattern index (cycled by regenerating)
+let sacredPatternIndex = 0;
+const sacredPatternNames = ['Flower of Life','Metatron\'s Cube','Sri Yantra','Merkaba','Seed of Life','Vesica Piscis'];
+
+function generateSacredGeometry(count) {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  let idx = 0;
+  const pattern = sacredPatternIndex % sacredPatternNames.length;
+
+  // Helper: draw circle outline as points
+  function drawCircle(cx, cy, cz, r, n) {
+    for (let i = 0; i < n && idx < count; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const i3 = idx * 3;
+      positions[i3]   = cx + Math.cos(a)*r + (Math.random()-0.5)*0.02;
+      positions[i3+1] = cy + Math.sin(a)*r + (Math.random()-0.5)*0.02;
+      positions[i3+2] = cz + (Math.random()-0.5)*0.015;
+      const d = Math.sqrt(cx*cx+cy*cy)/(r*3+0.01);
+      colors[i3]=1-d*0.3; colors[i3+1]=0.8-d*0.2; colors[i3+2]=1-d*0.1;
+      sizes[idx] = 0.5 + (1-Math.min(d,1))*0.6;
+      idx++;
+    }
+  }
+  // Helper: draw line as points
+  function drawLine(x1,y1,z1,x2,y2,z2,n) {
+    for (let i = 0; i < n && idx < count; i++) {
+      const t = i/n;
+      const i3 = idx*3;
+      positions[i3]=x1+(x2-x1)*t+(Math.random()-0.5)*0.015;
+      positions[i3+1]=y1+(y2-y1)*t+(Math.random()-0.5)*0.015;
+      positions[i3+2]=z1+(z2-z1)*t+(Math.random()-0.5)*0.015;
+      colors[i3]=0.8+t*0.2; colors[i3+1]=0.7; colors[i3+2]=0.9;
+      sizes[idx]=0.4+Math.random()*0.4;
+      idx++;
+    }
+  }
+  // Helper: draw triangle
+  function drawTriangle(pts, n) {
+    for (let e = 0; e < 3; e++) {
+      const a = pts[e], b = pts[(e+1)%3];
+      drawLine(a[0],a[1],a[2]||0, b[0],b[1],b[2]||0, n);
+    }
+  }
+
+  const r = 1.5;
+  const ppc = Math.floor(count * 0.04); // points per circle
+
+  if (pattern === 0) {
+    // ── Flower of Life ──
+    const centers = [[0,0]];
+    for (let ring = 1; ring <= 3; ring++) {
+      const n = ring * 6;
+      for (let i = 0; i < n; i++) {
+        const a = (i/n)*Math.PI*2 + (ring%2?Math.PI/n:0);
+        const d = ring * r * 0.58;
+        centers.push([Math.cos(a)*d, Math.sin(a)*d]);
+      }
+    }
+    const cPts = Math.floor(count*0.85/centers.length);
+    for (const [cx,cy] of centers) drawCircle(cx,cy,0,r*0.58,cPts);
+    // Outer bounding circle
+    drawCircle(0,0,0,r*1.8,Math.floor(count*0.1));
+
+  } else if (pattern === 1) {
+    // ── Metatron's Cube ──
+    // 13 circles: center + inner 6 + outer 6
+    const nodes = [[0,0]];
+    for (let i=0;i<6;i++){const a=i*Math.PI/3; nodes.push([Math.cos(a)*r,Math.sin(a)*r]);}
+    for (let i=0;i<6;i++){const a=i*Math.PI/3+Math.PI/6; nodes.push([Math.cos(a)*r*1.73,Math.sin(a)*r*1.73]);}
+    // Draw all circles
+    for (const [cx,cy] of nodes) drawCircle(cx,cy,0,r*0.3,ppc);
+    // Connect ALL nodes with lines (78 lines for 13 nodes)
+    const lPts = Math.max(5, Math.floor((count - idx) / (nodes.length*(nodes.length-1)/2)));
+    for (let i=0;i<nodes.length;i++) for (let j=i+1;j<nodes.length;j++)
+      drawLine(nodes[i][0],nodes[i][1],0, nodes[j][0],nodes[j][1],0, lPts);
+
+  } else if (pattern === 2) {
+    // ── Sri Yantra ── 9 interlocking triangles
+    const triangles = [];
+    // 4 upward-pointing triangles (Shiva)
+    for (let i=0;i<4;i++){
+      const s=r*(0.4+i*0.35); const off=-0.15*i;
+      triangles.push([[0,s+off,0],[-s*0.87,-s*0.5+off,0],[s*0.87,-s*0.5+off,0]]);
+    }
+    // 5 downward-pointing triangles (Shakti)
+    for (let i=0;i<5;i++){
+      const s=r*(0.3+i*0.3); const off=0.12*i;
+      triangles.push([[0,-s+off,0],[-s*0.87,s*0.5+off,0],[s*0.87,s*0.5+off,0]]);
+    }
+    const tPts = Math.floor(count*0.7/(9*3));
+    for (const tri of triangles) drawTriangle(tri, tPts);
+    // Outer lotus petals (2 rings of circles)
+    for (let i=0;i<16;i++){
+      const a=(i/16)*Math.PI*2;
+      drawCircle(Math.cos(a)*r*1.6,Math.sin(a)*r*1.6,0,r*0.25,ppc/2);
+    }
+    // Bounding square (bhupura)
+    const s=r*2.2;
+    drawLine(-s,-s,0,s,-s,0,ppc); drawLine(s,-s,0,s,s,0,ppc);
+    drawLine(s,s,0,-s,s,0,ppc); drawLine(-s,s,0,-s,-s,0,ppc);
+
+  } else if (pattern === 3) {
+    // ── Merkaba (Star Tetrahedron) ── 3D!
+    const s = r * 1.2;
+    // Upward tetrahedron
+    const up = [[0,s,0],[-s*0.87,-s*0.5,s*0.5],[s*0.87,-s*0.5,s*0.5],[0,-s*0.5,-s*0.7]];
+    // Downward tetrahedron (inverted)
+    const dn = [[0,-s,0],[-s*0.87,s*0.5,-s*0.5],[s*0.87,s*0.5,-s*0.5],[0,s*0.5,s*0.7]];
+    const ePts = Math.floor(count*0.4/12);
+    // Draw all edges of both tetrahedra
+    for (const tet of [up,dn]) {
+      for (let i=0;i<4;i++) for (let j=i+1;j<4;j++)
+        drawLine(tet[i][0],tet[i][1],tet[i][2],tet[j][0],tet[j][1],tet[j][2],ePts);
+    }
+    // Fill faces with sparse points
+    for (const tet of [up,dn]) {
+      for (let f=0;f<4&&idx<count;f++) {
+        const v = [tet[f],tet[(f+1)%4],tet[(f+2)%4]];
+        for (let p=0;p<Math.floor(count*0.05)&&idx<count;p++) {
+          let u1=Math.random(),u2=Math.random();
+          if(u1+u2>1){u1=1-u1;u2=1-u2;}
+          const u3=1-u1-u2;
+          const i3=idx*3;
+          positions[i3]=v[0][0]*u1+v[1][0]*u2+v[2][0]*u3+(Math.random()-0.5)*0.02;
+          positions[i3+1]=v[0][1]*u1+v[1][1]*u2+v[2][1]*u3+(Math.random()-0.5)*0.02;
+          positions[i3+2]=v[0][2]*u1+v[1][2]*u2+v[2][2]*u3+(Math.random()-0.5)*0.02;
+          colors[i3]=0.6;colors[i3+1]=0.5;colors[i3+2]=0.9;
+          sizes[idx]=0.3+Math.random()*0.3;
+          idx++;
+        }
+      }
+    }
+
+  } else if (pattern === 4) {
+    // ── Seed of Life ── 7 circles
+    drawCircle(0,0,0,r,ppc*3);
+    for (let i=0;i<6;i++){
+      const a=i*Math.PI/3;
+      drawCircle(Math.cos(a)*r,Math.sin(a)*r,0,r,ppc*3);
+    }
+
+  } else if (pattern === 5) {
+    // ── Vesica Piscis ── two overlapping circles
+    const d = r*0.58;
+    drawCircle(-d,0,0,r,Math.floor(count*0.35));
+    drawCircle(d,0,0,r,Math.floor(count*0.35));
+    // Fill the vesica (intersection) with dense points
+    for (let i=0;i<Math.floor(count*0.2)&&idx<count;i++){
+      const x=(Math.random()-0.5)*r*0.8;
+      const maxY=Math.sqrt(Math.max(0,r*r-(x+d)*(x+d)));
+      const maxY2=Math.sqrt(Math.max(0,r*r-(x-d)*(x-d)));
+      const yLim=Math.min(maxY,maxY2);
+      if(yLim<0.01)continue;
+      const y=(Math.random()-0.5)*2*yLim;
+      const i3=idx*3;
+      positions[i3]=x+(Math.random()-0.5)*0.02;
+      positions[i3+1]=y+(Math.random()-0.5)*0.02;
+      positions[i3+2]=(Math.random()-0.5)*0.03;
+      colors[i3]=0.9;colors[i3+1]=0.85;colors[i3+2]=1.0;
+      sizes[idx]=0.5+Math.random()*0.5;
+      idx++;
+    }
+  }
+
+  // Fill remaining
+  while (idx < count) {
+    const a=Math.random()*Math.PI*2, d2=Math.random()*3;
+    const i3=idx*3;
+    positions[i3]=Math.cos(a)*d2; positions[i3+1]=Math.sin(a)*d2;
+    positions[i3+2]=(Math.random()-0.5)*0.3;
+    colors[i3]=0.15;colors[i3+1]=0.15;colors[i3+2]=0.25;
+    sizes[idx]=0.15+Math.random()*0.2;
+    idx++;
+  }
+  return { positions, colors, sizes };
+}
+
+// ── Generators Map ─────────────────────────────────
+const generators = {
+  Galaxy: generateGalaxy,
+  DNA: generateDNA,
+  'Morph (Torus↔Sphere)': null,
+  'Fractal Tree': generateFractalTree,
+  Earth: generateEarth,
+  Jellyfish: generateJellyfish,
+  Waves: generateWaves,
+  Geodesic: generateGeodesic,
+  'Sacred Geometry': generateSacredGeometry,
+};
+
+// ── State ──────────────────────────────────────────
+const params = {
+  object: 'Galaxy',
+  particles: 50000,
+  pointSize: 8,
+  theme: 'Neon',
+  speed: 1.0,
+  autoRotate: true,
+  bloomStrength: 0.6,
+  bloomRadius: 0.3,
+  mouseEnabled: true,
+  mouseRadius: 1.5,
+  mouseStrength: 0.5,
+  mouseAttract: false,
+  trails: false,
+  trailLength: 0.92,
+};
+
+let pointsMesh, geometry, material;
+let morphTarget = null;
+let morphProgress = 0, morphDirection = 1;
+let currentPositions, targetPositions, currentColors, targetColors, currentSizes, targetSizes;
+let isTransitioning = false, transitionProgress = 0;
+let wavePhase = 0;
+
+// ── Wave base positions (for animation) ────────────
+let waveBasePositions = null;
+
+function applyTheme(colors, themeColors, count) {
+  for (let i = 0; i < count; i++) {
+    const i3 = i * 3;
+    const t = Math.min(1, colors[i3]*0.299 + colors[i3+1]*0.587 + colors[i3+2]*0.114);
+    const ft = t * (themeColors.length - 1);
+    const idx = Math.min(Math.floor(ft), themeColors.length - 2);
+    const blend = ft - idx;
+    const c1 = themeColors[idx], c2 = themeColors[idx + 1];
+    colors[i3]   = c1.r + (c2.r - c1.r) * blend;
+    colors[i3+1] = c1.g + (c2.g - c1.g) * blend;
+    colors[i3+2] = c1.b + (c2.b - c1.b) * blend;
+  }
+}
+
+function createPointCloud() {
+  const count = params.particles;
+  geometry = new THREE.BufferGeometry();
+  const data = generateGalaxy(count);
+
+  currentPositions = new Float32Array(data.positions);
+  targetPositions = new Float32Array(data.positions);
+  currentColors = new Float32Array(data.colors);
+  targetColors = new Float32Array(data.colors);
+  currentSizes = new Float32Array(data.sizes);
+  targetSizes = new Float32Array(data.sizes);
+
+  geometry.setAttribute('position', new THREE.BufferAttribute(currentPositions, 3));
+  geometry.setAttribute('aColor', new THREE.BufferAttribute(currentColors, 3));
+  geometry.setAttribute('aSize', new THREE.BufferAttribute(currentSizes, 1));
+
+  material = new THREE.ShaderMaterial({
+    uniforms: {
+      uSize: { value: params.pointSize },
+      uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
+      uTime: { value: 0 },
+      uMouse: { value: mouseWorld },
+      uMouseRadius: { value: params.mouseRadius },
+      uMouseStrength: { value: params.mouseStrength },
+      uMouseEnabled: { value: params.mouseEnabled ? 1.0 : 0.0 },
+    },
+    vertexShader,
+    fragmentShader,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+
+  pointsMesh = new THREE.Points(geometry, material);
+  pointsMesh.frustumCulled = false;
+  scene.add(pointsMesh);
+  geometry.computeBoundingSphere();
+}
+
+function switchObject() {
+  const count = params.particles;
+  let data;
+
+  if (params.object === 'Morph (Torus↔Sphere)') {
+    data = generateTorus(count);
+    const sd = generateSphere(count);
+    morphTarget = { positions: sd.positions, colors: sd.colors, sizes: sd.sizes };
+    morphProgress = 0; morphDirection = 1;
+  } else {
+    morphTarget = null;
+    data = generators[params.object](count);
+  }
+
+  // Store wave base for animation
+  if (params.object === 'Waves') {
+    waveBasePositions = new Float32Array(data.positions);
+  } else {
+    waveBasePositions = null;
+  }
+
+  // Resize if count changed
+  if (targetPositions.length !== count * 3) {
+    const oldPos = currentPositions, oldCol = currentColors, oldSz = currentSizes;
+    currentPositions = new Float32Array(count * 3);
+    targetPositions = new Float32Array(count * 3);
+    currentColors = new Float32Array(count * 3);
+    targetColors = new Float32Array(count * 3);
+    currentSizes = new Float32Array(count);
+    targetSizes = new Float32Array(count);
+    const cl3 = Math.min(oldPos.length, count*3), cl1 = Math.min(oldSz.length, count);
+    currentPositions.set(oldPos.subarray(0,cl3));
+    currentColors.set(oldCol.subarray(0,cl3));
+    currentSizes.set(oldSz.subarray(0,cl1));
+    for (let i = cl3; i < count*3; i+=3) {
+      currentPositions[i]=(Math.random()-0.5)*0.01;
+      currentPositions[i+1]=(Math.random()-0.5)*0.01;
+      currentPositions[i+2]=(Math.random()-0.5)*0.01;
+    }
+    geometry.setAttribute('position', new THREE.BufferAttribute(currentPositions, 3));
+    geometry.setAttribute('aColor', new THREE.BufferAttribute(currentColors, 3));
+    geometry.setAttribute('aSize', new THREE.BufferAttribute(currentSizes, 1));
+  }
+
+  targetPositions.set(data.positions);
+  targetColors.set(data.colors);
+  targetSizes.set(data.sizes);
+
+  const skipTheme = (params.object === 'Earth' || params.object === 'Galaxy');
+  if (!skipTheme) {
+    applyTheme(targetColors, themes[params.theme], count);
+    if (morphTarget) applyTheme(morphTarget.colors, themes[params.theme], count);
+  }
+
+  isTransitioning = true;
+  transitionProgress = 0;
+  pointsMesh.rotation.set(0, 0, 0);
+}
+
+// ── GUI ────────────────────────────────────────────
+const gui = new GUI({ title: 'Controls', width: 260 });
+
+const shapeFolder = gui.addFolder('Shape');
+shapeFolder.add(params, 'object', Object.keys(generators)).name('Object').onChange(obj => {
+  if (obj === 'Sacred Geometry') {
+    patternNextBtn.show(); patternAdvFolder.show();
+  } else {
+    patternNextBtn.hide(); patternAdvFolder.hide();
+  }
+  if (obj === 'Galaxy') {
+    galaxyNextBtn.show(); galaxyAdvFolder.show();
+  } else {
+    galaxyNextBtn.hide(); galaxyAdvFolder.hide();
+  }
+  switchObject();
+});
+shapeFolder.add(params, 'particles', 5000, 100000, 1000).name('Particles').onFinishChange(switchObject);
+shapeFolder.add(params, 'pointSize', 1, 30, 0.5).name('Point Size').onChange(v => { material.uniforms.uSize.value = v; });
+
+// Galaxy type controls (hidden when not on Galaxy)
+const galaxyCtrl = { galaxy: galaxyPatternNames[0], next() {
+  galaxyPatternIndex = (galaxyPatternIndex + 1) % galaxyPatternNames.length;
+  galaxyCtrl.galaxy = galaxyPatternNames[galaxyPatternIndex];
+  galaxyDropdown.updateDisplay();
+  if (params.object === 'Galaxy') switchObject();
+}};
+const galaxyNextBtn = shapeFolder.add(galaxyCtrl, 'next').name('⟳ Next Galaxy');
+const galaxyAdvFolder = shapeFolder.addFolder('Galaxy Options');
+const galaxyDropdown = galaxyAdvFolder.add(galaxyCtrl, 'galaxy', galaxyPatternNames).name('Select').onChange(v => {
+  galaxyPatternIndex = galaxyPatternNames.indexOf(v);
+  if (params.object === 'Galaxy') switchObject();
+});
+galaxyAdvFolder.close();
+// Show galaxy controls by default (Galaxy is the default object)
+// galaxyNextBtn and galaxyAdvFolder are shown since params.object starts as 'Galaxy'
+
+// Sacred Geometry pattern controls (hidden by default)
+const sacredCtrl = { pattern: sacredPatternNames[0], next() {
+  sacredPatternIndex = (sacredPatternIndex + 1) % sacredPatternNames.length;
+  sacredCtrl.pattern = sacredPatternNames[sacredPatternIndex];
+  patternDropdown.updateDisplay();
+  if (params.object === 'Sacred Geometry') switchObject();
+}};
+const patternNextBtn = shapeFolder.add(sacredCtrl, 'next').name('⟳ Next Pattern');
+const patternAdvFolder = shapeFolder.addFolder('Pattern Options');
+const patternDropdown = patternAdvFolder.add(sacredCtrl, 'pattern', sacredPatternNames).name('Select').onChange(v => {
+  sacredPatternIndex = sacredPatternNames.indexOf(v);
+  if (params.object === 'Sacred Geometry') switchObject();
+});
+patternAdvFolder.close();
+patternNextBtn.hide();
+patternAdvFolder.hide();
+
+const styleFolder = gui.addFolder('Style');
+styleFolder.add(params, 'theme', Object.keys(themes)).name('Theme').onChange(() => {
+  if (params.object !== 'Earth' && params.object !== 'Galaxy') {
+    applyTheme(targetColors, themes[params.theme], params.particles);
+    if (morphTarget) applyTheme(morphTarget.colors, themes[params.theme], params.particles);
+    if (!isTransitioning) { currentColors.set(targetColors); geometry.attributes.aColor.needsUpdate = true; }
+  }
+});
+styleFolder.add(params, 'speed', 0, 3, 0.1).name('Speed');
+styleFolder.add(params, 'autoRotate').name('Auto Rotate').onChange(v => { controls.autoRotate = v; });
+
+const mouseFolder = gui.addFolder('Mouse Field');
+mouseFolder.add(params, 'mouseEnabled').name('Enabled').onChange(v => { material.uniforms.uMouseEnabled.value = v ? 1 : 0; });
+mouseFolder.add(params, 'mouseRadius', 0.3, 4.0, 0.1).name('Radius').onChange(v => { material.uniforms.uMouseRadius.value = v; });
+mouseFolder.add(params, 'mouseStrength', 0.1, 2.0, 0.1).name('Strength').onChange(v => {
+  material.uniforms.uMouseStrength.value = params.mouseAttract ? -v : v;
+});
+mouseFolder.add(params, 'mouseAttract').name('Attract').onChange(v => {
+  material.uniforms.uMouseStrength.value = v ? -params.mouseStrength : params.mouseStrength;
+});
+
+const trailFolder = gui.addFolder('Trails');
+trailFolder.add(params, 'trails').name('Enabled').onChange(v => {
+  afterimagePass.enabled = v;
+  afterimagePass.uniforms.damp.value = v ? params.trailLength : 0;
+});
+trailFolder.add(params, 'trailLength', 0.8, 0.98, 0.01).name('Length').onChange(v => {
+  if (params.trails) afterimagePass.uniforms.damp.value = v;
+});
+
+const bloomFolder = gui.addFolder('Bloom');
+bloomFolder.add(params, 'bloomStrength', 0, 3, 0.1).name('Strength').onChange(v => { bloomPass.strength = v; });
+bloomFolder.add(params, 'bloomRadius', 0, 2, 0.1).name('Radius').onChange(v => { bloomPass.radius = v; });
+
+// Close less-used folders by default
+mouseFolder.close();
+trailFolder.close();
+bloomFolder.close();
+
+// ── Animation ──────────────────────────────────────
+const clock = new THREE.Clock();
+
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+function animate() {
+  requestAnimationFrame(animate);
+  const delta = clock.getDelta();
+  const elapsed = clock.getElapsedTime();
+  controls.update();
+
+  if (!pointsMesh) return;
+
+  material.uniforms.uTime.value = elapsed;
+
+  // Smooth mouse tracking: camera-facing plane + lerp
+  if (mouseActive) {
+    cameraPlane.setFromNormalAndCoplanarPoint(
+      camera.getWorldDirection(_camDir).negate(),
+      scene.position
+    );
+    raycaster.setFromCamera(mouseNDC, camera);
+    raycaster.ray.intersectPlane(cameraPlane, mouseTarget);
+    // Smooth lerp toward target (lower = smoother)
+    mouseWorld.lerp(mouseTarget, 0.08);
+  } else {
+    // Gently drift away when mouse leaves
+    mouseWorld.lerp(_mouseOff, 0.03);
+  }
+
+  const count = params.particles;
+  const posAttr = geometry.getAttribute('position');
+  const colAttr = geometry.getAttribute('aColor');
+  const szAttr = geometry.getAttribute('aSize');
+
+  // Smooth transition
+  if (isTransitioning) {
+    transitionProgress = Math.min(transitionProgress + delta * 2.0, 1);
+    const t = smoothstep(transitionProgress);
+    for (let i = 0; i < count*3; i++) {
+      currentPositions[i] += (targetPositions[i] - currentPositions[i]) * t;
+      currentColors[i] += (targetColors[i] - currentColors[i]) * t;
+    }
+    for (let i = 0; i < count; i++) currentSizes[i] += (targetSizes[i] - currentSizes[i]) * t;
+    posAttr.needsUpdate = true; colAttr.needsUpdate = true; szAttr.needsUpdate = true;
+    if (transitionProgress >= 1) isTransitioning = false;
+  }
+
+  // Morph animation
+  if (morphTarget && !isTransitioning) {
+    morphProgress += delta * 0.3 * params.speed * morphDirection;
+    if (morphProgress >= 1) { morphProgress = 1; morphDirection = -1; }
+    if (morphProgress <= 0) { morphProgress = 0; morphDirection = 1; }
+    const t = smoothstep(morphProgress);
+    for (let i = 0; i < count*3; i++) {
+      currentPositions[i] = targetPositions[i] + (morphTarget.positions[i] - targetPositions[i]) * t;
+      currentColors[i] = targetColors[i] + (morphTarget.colors[i] - targetColors[i]) * t;
+    }
+    posAttr.needsUpdate = true; colAttr.needsUpdate = true;
+  }
+
+  // Per-object animation
+  if (!isTransitioning && !morphTarget) {
+    const speed = params.speed;
+    const obj = params.object;
+
+    if (obj === 'Galaxy') {
+      pointsMesh.rotation.y += delta * 0.08 * speed;
+    } else if (obj === 'DNA') {
+      pointsMesh.rotation.y += delta * 0.25 * speed;
+    } else if (obj === 'Fractal Tree') {
+      pointsMesh.rotation.y += delta * 0.03 * speed;
+    } else if (obj === 'Earth') {
+      pointsMesh.rotation.y += delta * 0.06 * speed;
+    } else if (obj === 'Jellyfish') {
+      // Gentle pulsing + tentacle sway
+      const pulse = Math.sin(elapsed * 2 * speed) * 0.04;
+      const bellCount = Math.floor(count * 0.4);
+      for (let i = 0; i < count; i++) {
+        const i3 = i * 3;
+        if (i < bellCount) {
+          // Bell pulse
+          const scale = 1.0 + pulse;
+          currentPositions[i3] = targetPositions[i3] * scale;
+          currentPositions[i3+1] = targetPositions[i3+1] * (1.0 - pulse * 0.5);
+          currentPositions[i3+2] = targetPositions[i3+2] * scale;
+        } else {
+          // Tentacle sway
+          const t = (i - bellCount) / (count - bellCount);
+          const sway = Math.sin(elapsed * 1.5 * speed + t * 5) * 0.15 * t;
+          currentPositions[i3] = targetPositions[i3] + sway;
+          currentPositions[i3+2] = targetPositions[i3+2] + sway * 0.5;
+          currentPositions[i3+1] = targetPositions[i3+1] + Math.sin(elapsed * speed + t * 3) * 0.05 * t;
+        }
+      }
+      posAttr.needsUpdate = true;
+    } else if (obj === 'Waves' && waveBasePositions) {
+      // Animate wave phase
+      wavePhase += delta * speed * 0.8;
+      const gridSize = Math.ceil(Math.sqrt(count));
+      for (let i = 0; i < count; i++) {
+        const i3 = i * 3;
+        const x = waveBasePositions[i3];
+        const z = waveBasePositions[i3+2];
+        const y = Math.sin(x * 1.5 + wavePhase) * 0.4
+                + Math.sin(z * 2.0 + wavePhase * 0.7) * 0.3
+                + Math.sin((x + z) * 1.0 + wavePhase * 1.3) * 0.2
+                + Math.sin(x * 3.0 + z * 1.5 + wavePhase * 0.5) * 0.1;
+        currentPositions[i3] = x;
+        currentPositions[i3+1] = y;
+        currentPositions[i3+2] = z;
+
+        // Update colors based on height
+        const ct = (y + 1) / 2;
+        currentColors[i3] = ct; currentColors[i3+1] = ct; currentColors[i3+2] = ct;
+      }
+      applyTheme(currentColors, themes[params.theme], count);
+      posAttr.needsUpdate = true;
+      colAttr.needsUpdate = true;
+    } else if (obj === 'Geodesic') {
+      pointsMesh.rotation.y += delta * 0.05 * speed;
+      pointsMesh.rotation.x += delta * 0.02 * speed;
+    } else if (obj === 'Sacred Geometry') {
+      pointsMesh.rotation.z += delta * 0.04 * speed;
+    }
+  }
+
+  composer.render();
+}
+
+// ── Init ───────────────────────────────────────────
+createPointCloud();
+switchObject();
+animate();
+</script>
+</body>
+</html>
