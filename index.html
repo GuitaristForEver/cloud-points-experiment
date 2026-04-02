@@ -1401,17 +1401,18 @@ function generateNebulaCloud(count) {
   const bellFlags = new Float32Array(count); // all 0.0 — not jellyfish
   for (let i = 0; i < count; i++) {
     const i3 = i * 3;
-    const r = (Math.random() + Math.random()) * 2.5;
+    const r = (Math.random() + Math.random()) * 2.8;
     const theta = Math.random() * Math.PI * 2;
-    const phi = (Math.random() - 0.5) * 0.6;
+    const phi = (Math.random() - 0.5) * 0.4;
     positions[i3]   = Math.cos(theta) * r;
-    positions[i3+1] = Math.sin(phi) * r * 0.3;
+    positions[i3+1] = Math.sin(phi) * r * 0.2;
     positions[i3+2] = Math.sin(theta) * r;
     const t = Math.random();
-    colors[i3] = 0.3 + t * 0.4;
-    colors[i3+1] = 0.1 + t * 0.2;
-    colors[i3+2] = 0.5 + t * 0.3;
-    sizes[i] = 1.5 + Math.random() * 2.5;
+    colors[i3]   = 0.25 + t * 0.35;
+    colors[i3+1] = 0.08 + t * 0.15;
+    colors[i3+2] = 0.45 + t * 0.35;
+    // Very large particles = soft diffuse blobs, not visible dots
+    sizes[i] = 6 + Math.random() * 10;
   }
   return { positions, colors, sizes, bellFlags };
 }
@@ -1669,7 +1670,7 @@ function switchObject() {
     nGeo.setAttribute('aBellFlag',new THREE.BufferAttribute(nd.bellFlags, 1));
     const nMat = new THREE.ShaderMaterial({
       uniforms: {
-        uSize:         { value: 28 },
+        uSize:         { value: 55 },
         uPixelRatio:   { value: Math.min(window.devicePixelRatio, 2) },
         uTime:         { value: 0 },
         uMouse:        { value: new THREE.Vector3(9999,9999,9999) },
@@ -1680,7 +1681,7 @@ function switchObject() {
         uWells:        { value: [new THREE.Vector3(9999,9999,9999), new THREE.Vector3(9999,9999,9999), new THREE.Vector3(9999,9999,9999)] },
         uWellCount:    { value: 0 },
         uWellStrength: { value: 0 },
-        uAlphaScale:   { value: 0.13 },
+        uAlphaScale:   { value: 0.055 },
       },
       vertexShader,
       fragmentShader,
