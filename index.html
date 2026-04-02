@@ -1356,6 +1356,28 @@ function generateSacredGeometry(count) {
   return { positions, colors, sizes };
 }
 
+function generateNebulaCloud(count) {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+  const bellFlags = new Float32Array(count); // all 0.0 — not jellyfish
+  for (let i = 0; i < count; i++) {
+    const i3 = i * 3;
+    const r = (Math.random() + Math.random()) * 2.5;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = (Math.random() - 0.5) * 0.6;
+    positions[i3]   = Math.cos(theta) * r;
+    positions[i3+1] = Math.sin(phi) * r * 0.3;
+    positions[i3+2] = Math.sin(theta) * r;
+    const t = Math.random();
+    colors[i3] = 0.3 + t * 0.4;
+    colors[i3+1] = 0.1 + t * 0.2;
+    colors[i3+2] = 0.5 + t * 0.3;
+    sizes[i] = 1.5 + Math.random() * 2.5;
+  }
+  return { positions, colors, sizes, bellFlags };
+}
+
 // ── Generators Map ─────────────────────────────────
 const generators = {
   Galaxy: generateGalaxy,
@@ -1388,6 +1410,7 @@ const params = {
 };
 
 let pointsMesh, geometry, material;
+let nebulaMesh = null;
 let morphTarget = null;
 let morphProgress = 0, morphDirection = 1;
 let currentPositions, targetPositions, currentColors, targetColors, currentSizes, targetSizes;
@@ -1454,6 +1477,12 @@ function createPointCloud() {
 }
 
 function switchObject() {
+  if (nebulaMesh) {
+    scene.remove(nebulaMesh);
+    nebulaMesh.geometry.dispose();
+    nebulaMesh.material.dispose();
+    nebulaMesh = null;
+  }
   const count = params.particles;
   let data;
 
@@ -1513,6 +1542,39 @@ function switchObject() {
   isTransitioning = true;
   transitionProgress = 0;
   pointsMesh.rotation.set(0, 0, 0);
+
+  if (params.object === 'Galaxy') {
+    const nd = generateNebulaCloud(20000);
+    const nGeo = new THREE.BufferGeometry();
+    nGeo.setAttribute('position', new THREE.BufferAttribute(nd.positions, 3));
+    nGeo.setAttribute('aColor',   new THREE.BufferAttribute(nd.colors, 3));
+    nGeo.setAttribute('aSize',    new THREE.BufferAttribute(nd.sizes, 1));
+    nGeo.setAttribute('aBellFlag',new THREE.BufferAttribute(nd.bellFlags, 1));
+    const nMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uSize:         { value: 28 },
+        uPixelRatio:   { value: Math.min(window.devicePixelRatio, 2) },
+        uTime:         { value: 0 },
+        uMouse:        { value: new THREE.Vector3(9999,9999,9999) },
+        uMouseRadius:  { value: 0 },
+        uMouseStrength:{ value: 0 },
+        uMouseEnabled: { value: 0 },
+        uObjectType:   { value: 0 },
+        uWells:        { value: [new THREE.Vector3(9999,9999,9999), new THREE.Vector3(9999,9999,9999), new THREE.Vector3(9999,9999,9999)] },
+        uWellCount:    { value: 0 },
+        uWellStrength: { value: 0 },
+        uAlphaScale:   { value: 0.13 },
+      },
+      vertexShader,
+      fragmentShader,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    nebulaMesh = new THREE.Points(nGeo, nMat);
+    nebulaMesh.frustumCulled = false;
+    scene.add(nebulaMesh);
+  }
 }
 
 // ── GUI ────────────────────────────────────────────
@@ -1639,6 +1701,7 @@ function animate() {
   if (!pointsMesh) return;
 
   material.uniforms.uTime.value = elapsed;
+  if (nebulaMesh) nebulaMesh.material.uniforms.uTime.value = elapsed;
 
   // Smooth mouse tracking: camera-facing plane + lerp
   if (mouseActive) {
