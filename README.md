@@ -38,7 +38,7 @@ Interactive 3D particle visualization experiment using Three.js.
 
 ## Live Demo
 
-🚀 **[View Demo](https://cloud-points-experiment.vercel.app)** _(after deployment)_
+🚀 **[View Demo](https://guitaristforever.github.io/cloud-points-experiment/)**
 
 ## Tech Stack
 
