@@ -1356,10 +1356,8 @@ let morphTarget = null;
 let morphProgress = 0, morphDirection = 1;
 let currentPositions, targetPositions, currentColors, targetColors, currentSizes, targetSizes;
 let isTransitioning = false, transitionProgress = 0;
-let wavePhase = 0;
 
 // ── Wave base positions (for animation) ────────────
-let waveBasePositions = null;
 
 function applyTheme(colors, themeColors, count) {
   for (let i = 0; i < count; i++) {
@@ -1401,6 +1399,10 @@ function createPointCloud() {
       uMouseStrength: { value: params.mouseStrength },
       uMouseEnabled: { value: params.mouseEnabled ? 1.0 : 0.0 },
       uAlphaScale: { value: 1.0 },
+      uObjectType:   { value: 0 },
+      uWells:        { value: [new THREE.Vector3(9999,9999,9999), new THREE.Vector3(9999,9999,9999), new THREE.Vector3(9999,9999,9999)] },
+      uWellCount:    { value: 0 },
+      uWellStrength: { value: 0.4 },
     },
     vertexShader,
     fragmentShader,
@@ -1427,13 +1429,6 @@ function switchObject() {
   } else {
     morphTarget = null;
     data = generators[params.object](count);
-  }
-
-  // Store wave base for animation
-  if (params.object === 'Waves') {
-    waveBasePositions = new Float32Array(data.positions);
-  } else {
-    waveBasePositions = null;
   }
 
   // Resize if count changed
@@ -1463,12 +1458,22 @@ function switchObject() {
   targetColors.set(data.colors);
   targetSizes.set(data.sizes);
 
+  // Wire aBellFlag attribute for Jellyfish GPU animation
+  if (params.object === 'Jellyfish' && data.bellFlags) {
+    const bellAttr = new THREE.BufferAttribute(data.bellFlags, 1);
+    geometry.setAttribute('aBellFlag', bellAttr);
+  } else {
+    geometry.deleteAttribute('aBellFlag');
+  }
+
   const skipTheme = (params.object === 'Earth' || params.object === 'Galaxy');
   if (!skipTheme) {
     applyTheme(targetColors, themes[params.theme], count);
     if (morphTarget) applyTheme(morphTarget.colors, themes[params.theme], count);
   }
 
+  const objTypeMap = { 'Waves': 1, 'Jellyfish': 2 };
+  if (material) material.uniforms.uObjectType.value = objTypeMap[params.object] || 0;
   isTransitioning = true;
   transitionProgress = 0;
   pointsMesh.rotation.set(0, 0, 0);
@@ -1641,51 +1646,6 @@ function animate() {
       pointsMesh.rotation.y += delta * 0.03 * speed;
     } else if (obj === 'Earth') {
       pointsMesh.rotation.y += delta * 0.06 * speed;
-    } else if (obj === 'Jellyfish') {
-      // Gentle pulsing + tentacle sway
-      const pulse = Math.sin(elapsed * 2 * speed) * 0.04;
-      const bellCount = Math.floor(count * 0.4);
-      for (let i = 0; i < count; i++) {
-        const i3 = i * 3;
-        if (i < bellCount) {
-          // Bell pulse
-          const scale = 1.0 + pulse;
-          currentPositions[i3] = targetPositions[i3] * scale;
-          currentPositions[i3+1] = targetPositions[i3+1] * (1.0 - pulse * 0.5);
-          currentPositions[i3+2] = targetPositions[i3+2] * scale;
-        } else {
-          // Tentacle sway
-          const t = (i - bellCount) / (count - bellCount);
-          const sway = Math.sin(elapsed * 1.5 * speed + t * 5) * 0.15 * t;
-          currentPositions[i3] = targetPositions[i3] + sway;
-          currentPositions[i3+2] = targetPositions[i3+2] + sway * 0.5;
-          currentPositions[i3+1] = targetPositions[i3+1] + Math.sin(elapsed * speed + t * 3) * 0.05 * t;
-        }
-      }
-      posAttr.needsUpdate = true;
-    } else if (obj === 'Waves' && waveBasePositions) {
-      // Animate wave phase
-      wavePhase += delta * speed * 0.8;
-      const gridSize = Math.ceil(Math.sqrt(count));
-      for (let i = 0; i < count; i++) {
-        const i3 = i * 3;
-        const x = waveBasePositions[i3];
-        const z = waveBasePositions[i3+2];
-        const y = Math.sin(x * 1.5 + wavePhase) * 0.4
-                + Math.sin(z * 2.0 + wavePhase * 0.7) * 0.3
-                + Math.sin((x + z) * 1.0 + wavePhase * 1.3) * 0.2
-                + Math.sin(x * 3.0 + z * 1.5 + wavePhase * 0.5) * 0.1;
-        currentPositions[i3] = x;
-        currentPositions[i3+1] = y;
-        currentPositions[i3+2] = z;
-
-        // Update colors based on height
-        const ct = (y + 1) / 2;
-        currentColors[i3] = ct; currentColors[i3+1] = ct; currentColors[i3+2] = ct;
-      }
-      applyTheme(currentColors, themes[params.theme], count);
-      posAttr.needsUpdate = true;
-      colAttr.needsUpdate = true;
     } else if (obj === 'Geodesic') {
       pointsMesh.rotation.y += delta * 0.05 * speed;
       pointsMesh.rotation.x += delta * 0.02 * speed;
