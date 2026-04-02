@@ -264,7 +264,11 @@ controls.maxDistance = 15;
 controls.minDistance = 1;
 
 // ── Post-Processing ────────────────────────────────
-const composer = new EffectComposer(renderer);
+const hdrTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+  type: THREE.HalfFloatType,
+  format: THREE.RGBAFormat,
+});
+const composer = new EffectComposer(renderer, hdrTarget);
 composer.addPass(new RenderPass(scene, camera));
 
 const afterimagePass = new AfterimagePass(0.0);
@@ -273,7 +277,7 @@ composer.addPass(afterimagePass);
 
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.6, 0.3, 0.3
+  0.8, 0.4, 0.1
 );
 composer.addPass(bloomPass);
 
@@ -372,7 +376,7 @@ const vertexShader = `
             + sin((x + z) * 1.0 + uTime * 1.3) * 0.2
             + sin(x * 3.0 + z * 1.5 + uTime * 0.5) * 0.1;
       float ct = (pos.y + 1.0) / 2.0;
-      vColor = vec3(ct);
+      vColor = aColor * (0.4 + ct * 0.6);
     }
 
     // GPU Jellyfish animation (uObjectType == 2)
@@ -446,7 +450,7 @@ const fragmentShader = `
     float hash = fract(sin(dot(vWorldPos.xy, vec2(127.1, 311.7))) * 43758.5);
     float pulse = 0.85 + 0.15 * sin(uTime * 1.5 + hash * 6.28318);
 
-    gl_FragColor = vec4(vColor, strength * vAlpha * 0.6 * pulse * uAlphaScale);
+    gl_FragColor = vec4(vColor, strength * vAlpha * pulse * uAlphaScale);
   }
 `;
 
@@ -489,18 +493,28 @@ function generateGalaxy(count) {
     // ── Milky Way — barred spiral, 4 arms ──
     const R = 3.5, spin = 1.8;
     const barHalf = 1.2, barW = 0.25;
-    const bulgeN = Math.floor(count * 0.18);
-    const barN   = Math.floor(count * 0.10);
-    const armN   = Math.floor(count * 0.56);
-    const diskN  = count - bulgeN - barN - armN;
+    const nucleusN = Math.floor(count * 0.015);
+    const bulgeN   = Math.floor(count * 0.165);
+    const barN     = Math.floor(count * 0.10);
+    const armN     = Math.floor(count * 0.56);
+    const diskN    = count - nucleusN - bulgeN - barN - armN;
+
+    // Blazing nucleus — super-bright white-hot core
+    for (let i = 0; i < nucleusN; i++) {
+      const r = Math.pow(Math.random(), 4) * 0.18;
+      const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
+      const brightness = 2.5 + Math.random() * 1.5;
+      place(r*Math.sin(th)*Math.cos(ph), r*Math.cos(th)*0.3, r*Math.sin(th)*Math.sin(ph),
+        brightness, brightness * 0.95, brightness * 0.7, 2.5 + Math.random()*1.5);
+    }
 
     // Central bulge — dense, warm yellow-white
     for (let i = 0; i < bulgeN; i++) {
       const r = Math.pow(Math.random(), 2) * 0.7;
       const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
-      const lum = 0.85 + Math.random()*0.15;
+      const lum = 1.0 + Math.random()*0.4;
       place(r*Math.sin(th)*Math.cos(ph), r*Math.cos(th)*0.6, r*Math.sin(th)*Math.sin(ph),
-        lum, lum*0.88, lum*0.6, 1.2 + Math.random()*1.2);
+        lum, lum*0.88, lum*0.55, 1.4 + Math.random()*1.4);
     }
 
     // Central bar — elongated along x
@@ -508,32 +522,31 @@ function generateGalaxy(count) {
       const bx = (Math.random()-0.5)*2*barHalf;
       const by = (Math.random()-0.5)*0.08;
       const bz = (Math.random()-0.5)*2*barW;
-      const lum = 0.7 + Math.random()*0.2;
-      place(bx, by, bz, lum, lum*0.85, lum*0.55, 0.6+Math.random()*0.6);
+      const lum = 0.9 + Math.random()*0.3;
+      place(bx, by, bz, lum, lum*0.85, lum*0.5, 0.7+Math.random()*0.7);
     }
 
     // 4 spiral arms (Sagittarius, Perseus, Norma, Scutum-Centaurus)
     for (let i = 0; i < armN; i++) {
       const arm = i % 4;
       const armOffset = (arm / 4) * Math.PI * 2;
-      // Arms emerge from bar ends
       const startR = barHalf * 0.85;
       const r = startR + Math.pow(Math.random(), 0.6) * (R - startR);
       const angle = armOffset + (r - startR) * spin + (Math.random()-0.5)*0.35;
-      const spread = 0.08 + r * 0.05;
+      const spread = 0.06 + r * 0.04;
       const x = Math.cos(angle)*r + (Math.random()-0.5)*spread;
       const z = Math.sin(angle)*r + (Math.random()-0.5)*spread;
       const y = (Math.random()-0.5)*0.15 * (r/R);
-      // Inner arms: warm, outer: blue star-forming
       const t = (r - startR) / (R - startR);
-      const br = 0.6 + (1-t)*0.3 + Math.random()*0.15;
-      const bg = 0.55 + (1-t)*0.25 + Math.random()*0.15;
-      const bb = 0.45 + t*0.55 + Math.random()*0.2;
-      // HII star-forming clumps in arms
-      const isHII = Math.random() < 0.08;
+      // Inner: warm gold, outer: vivid electric blue
+      const br = 1.0 + (1-t)*0.5 + Math.random()*0.2;
+      const bg = 0.8 + (1-t)*0.3 + Math.random()*0.15;
+      const bb = 0.3 + t*1.2 + Math.random()*0.3;
+      // HII star-forming clumps — vivid blue-white bursts
+      const isHII = Math.random() < 0.12;
       place(x, y, z,
-        isHII ? 0.3 : br, isHII ? 0.7 : bg, isHII ? 1.0 : bb,
-        isHII ? 1.5+Math.random() : 0.5+Math.random()*0.8);
+        isHII ? 0.4 : br, isHII ? 0.85 : bg, isHII ? 2.0 : bb,
+        isHII ? 2.2+Math.random()*0.8 : 0.6+Math.random()*0.8);
     }
 
     // Thin background disk
@@ -542,7 +555,7 @@ function generateGalaxy(count) {
       const a = Math.random() * Math.PI * 2;
       const y = (Math.random()-0.5) * 0.12 * Math.exp(-r/R);
       place(Math.cos(a)*r, y, Math.sin(a)*r,
-        0.25+Math.random()*0.15, 0.2+Math.random()*0.15, 0.35+Math.random()*0.2,
+        0.3+Math.random()*0.2, 0.25+Math.random()*0.2, 0.45+Math.random()*0.25,
         0.3+Math.random()*0.35);
     }
 
@@ -556,16 +569,24 @@ function generateGalaxy(count) {
     const armN   = Math.floor(count * 0.50);
     const diskN  = count - bulgeN - armN;
 
-    // Large, bright central bulge — very prominent in Andromeda
-    for (let i = 0; i < bulgeN; i++) {
+    // Large, bright central bulge — very prominent in Andromeda + blazing nucleus
+    const aNucleusN = Math.floor(bulgeN * 0.06);
+    for (let i = 0; i < aNucleusN; i++) {
+      const r = Math.pow(Math.random(), 4) * 0.15;
+      const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
+      const brightness = 2.8 + Math.random() * 1.2;
+      const x0 = r*Math.sin(th)*Math.cos(ph), y0 = r*Math.cos(th)*0.4, z0 = r*Math.sin(th)*Math.sin(ph);
+      place(x0, y0*cosI - z0*sinI, y0*sinI + z0*cosI, brightness, brightness*0.92, brightness*0.65, 2.8+Math.random()*1.2);
+    }
+    for (let i = aNucleusN; i < bulgeN; i++) {
       const r = Math.pow(Math.random(), 1.5) * 1.0;
       const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
-      const lum = 0.9 - r*0.3;
+      const lum = 1.1 - r*0.2;
       const x0 = r*Math.sin(th)*Math.cos(ph);
       const y0 = r*Math.cos(th)*0.7;
       const z0 = r*Math.sin(th)*Math.sin(ph);
       place(x0, y0*cosI - z0*sinI, y0*sinI + z0*cosI,
-        lum, lum*0.9, lum*0.65, 1.4+Math.random()*1.2);
+        lum, lum*0.9, lum*0.65, 1.6+Math.random()*1.4);
     }
 
     // Two arms (less winding than Milky Way)
@@ -579,10 +600,11 @@ function generateGalaxy(count) {
       const y0 = (Math.random()-0.5)*0.1*(r/R);
       const z0 = Math.sin(angle)*r + (Math.random()-0.5)*spread;
       const t = r / R;
-      const bl = 0.5 + t*0.4;
+      const bl = 0.6 + t*0.9;
+      const isHII = Math.random() < 0.1;
       place(x0, y0*cosI - z0*sinI, y0*sinI + z0*cosI,
-        0.6*(1-t)+0.2, 0.55*(1-t)+0.35*t, bl,
-        0.5+Math.random()*0.7);
+        isHII ? 0.3 : 0.9*(1-t)+0.15, isHII ? 0.8 : 0.75*(1-t)+0.35*t, isHII ? 1.8 : bl,
+        isHII ? 2.0+Math.random() : 0.6+Math.random()*0.8);
     }
 
     // Faint extended disk
@@ -616,13 +638,21 @@ function generateGalaxy(count) {
     const diskN  = Math.floor(count * 0.45);
     const haloN  = count - bulgeN - diskN;
 
-    // Massive spheroidal bulge (dominates Sombrero)
-    for (let i = 0; i < bulgeN; i++) {
+    // Massive spheroidal bulge (dominates Sombrero) + blazing nucleus
+    const sNucN = Math.floor(bulgeN * 0.03);
+    for (let i = 0; i < sNucN; i++) {
+      const r = Math.pow(Math.random(), 4) * 0.12;
+      const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
+      const brightness = 3.5 + Math.random() * 1.0;
+      place(r*Math.sin(th)*Math.cos(ph)*1.2, r*Math.cos(th), r*Math.sin(th)*Math.sin(ph)*1.2,
+        brightness, brightness*0.93, brightness*0.65, 3.0+Math.random()*1.5);
+    }
+    for (let i = sNucN; i < bulgeN; i++) {
       const r = Math.pow(Math.random(), 1.5) * 1.4;
       const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
-      const lum = Math.max(0, 0.95 - r*0.4);
+      const lum = Math.max(0.1, 1.2 - r*0.5);
       place(r*Math.sin(th)*Math.cos(ph)*1.2, r*Math.cos(th), r*Math.sin(th)*Math.sin(ph)*1.2,
-        lum, lum*0.88, lum*0.60, 0.8+Math.random()*1.2);
+        lum, lum*0.88, lum*0.60, 1.0+Math.random()*1.4);
     }
 
     // Thin edge-on disk — with gap for dust lane
@@ -658,13 +688,21 @@ function generateGalaxy(count) {
     const diskN  = Math.floor(count * 0.18);
     const compN  = count - bulgeN - armN - diskN; // companion galaxy
 
-    // Main galaxy bulge
-    for (let i = 0; i < bulgeN; i++) {
+    // Main galaxy bulge + nucleus
+    const wNucN = Math.floor(bulgeN * 0.08);
+    for (let i = 0; i < wNucN; i++) {
+      const r = Math.pow(Math.random(), 4) * 0.12;
+      const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
+      const brightness = 3.0 + Math.random() * 1.5;
+      place(r*Math.sin(th)*Math.cos(ph), r*Math.cos(th)*0.3, r*Math.sin(th)*Math.sin(ph),
+        brightness, brightness*0.92, brightness*0.6, 2.5+Math.random()*1.5);
+    }
+    for (let i = wNucN; i < bulgeN; i++) {
       const r = Math.pow(Math.random(), 2) * 0.5;
       const th = Math.acos(2*Math.random()-1), ph = Math.random()*Math.PI*2;
-      const lum = 0.9 - r;
+      const lum = 1.2 - r*0.8;
       place(r*Math.sin(th)*Math.cos(ph), r*Math.cos(th)*0.5, r*Math.sin(th)*Math.sin(ph),
-        lum, lum*0.85, lum*0.55, 1.2+Math.random()*1.0);
+        lum, lum*0.85, lum*0.55, 1.4+Math.random()*1.2);
     }
 
     // Two prominent arms — very well-defined in M51
@@ -676,12 +714,12 @@ function generateGalaxy(count) {
       const spread = 0.07 + r*0.035;
       const t = r / R;
       // Vivid blue star-forming knots
-      const isKnot = Math.random() < 0.12;
+      const isKnot = Math.random() < 0.15;
       place(Math.cos(angle)*r + (Math.random()-0.5)*spread,
         (Math.random()-0.5)*0.1*(1-t),
         Math.sin(angle)*r + (Math.random()-0.5)*spread,
-        isKnot ? 0.2 : 0.5*(1-t)+0.1, isKnot ? 0.6 : 0.5*(1-t)+0.3*t, isKnot ? 1.0 : 0.4+t*0.55,
-        isKnot ? 1.8 : 0.5+Math.random()*0.6);
+        isKnot ? 0.2 : 0.8*(1-t)+0.1, isKnot ? 0.7 : 0.7*(1-t)+0.3*t, isKnot ? 2.0 : 0.5+t*1.1,
+        isKnot ? 2.2+Math.random()*0.8 : 0.6+Math.random()*0.7);
     }
 
     // Disk
@@ -754,8 +792,8 @@ function generateGalaxy(count) {
         const a = Math.random()*Math.PI*2;
         const isBlue = Math.random() < 0.6;
         place(hx + Math.cos(a)*r, hy + (Math.random()-0.5)*0.05, hz + Math.sin(a)*r,
-          isBlue ? 0.15 : 0.9, isBlue ? 0.45 : 0.2, isBlue ? 1.0 : 0.6,
-          1.2+Math.random()*1.2);
+          isBlue ? 0.2 : 1.2, isBlue ? 0.6 : 0.25, isBlue ? 2.2 : 0.8,
+          1.8+Math.random()*1.5);
       }
     }
   }
@@ -1467,8 +1505,8 @@ const params = {
   theme: 'Neon',
   speed: 1.0,
   autoRotate: true,
-  bloomStrength: 0.6,
-  bloomRadius: 0.3,
+  bloomStrength: 0.8,
+  bloomRadius: 0.4,
   mouseEnabled: true,
   mouseRadius: 1.5,
   mouseStrength: 0.5,
@@ -1608,6 +1646,16 @@ function switchObject() {
 
   const objTypeMap = { 'Waves': 1, 'Jellyfish': 2 };
   if (material) material.uniforms.uObjectType.value = objTypeMap[params.object] || 0;
+
+  // Per-shape bloom tuning
+  if (params.object === 'Galaxy') {
+    bloomPass.strength = 2.2; bloomPass.radius = 0.7; bloomPass.threshold = 0.04;
+  } else if (params.object === 'Nebula') {
+    bloomPass.strength = 1.6; bloomPass.radius = 0.8; bloomPass.threshold = 0.06;
+  } else {
+    bloomPass.strength = params.bloomStrength; bloomPass.radius = params.bloomRadius; bloomPass.threshold = 0.1;
+  }
+
   isTransitioning = true;
   transitionProgress = 0;
   pointsMesh.rotation.set(0, 0, 0);
