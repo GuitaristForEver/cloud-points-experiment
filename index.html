@@ -291,6 +291,15 @@ const mouseTarget = new THREE.Vector3(9999, 9999, 9999);
 const mouseWorld = new THREE.Vector3(9999, 9999, 9999);
 const cameraPlane = new THREE.Plane();
 let mouseActive = false;
+// ── Gravity Wells ──────────────────────────────────
+const wells = [];
+const wellVectors = [
+  new THREE.Vector3(9999,9999,9999),
+  new THREE.Vector3(9999,9999,9999),
+  new THREE.Vector3(9999,9999,9999)
+];
+let isDragging = false;
+let dragStartX = 0, dragStartY = 0;
 const _camDir = new THREE.Vector3();
 const _mouseOff = new THREE.Vector3(9999, 9999, 9999);
 
@@ -301,6 +310,33 @@ renderer.domElement.addEventListener('mousemove', (e) => {
 });
 renderer.domElement.addEventListener('mouseleave', () => {
   mouseActive = false;
+});
+renderer.domElement.addEventListener('mousedown', (e) => {
+  dragStartX = e.clientX; dragStartY = e.clientY; isDragging = false;
+});
+renderer.domElement.addEventListener('mousemove', (e) => {
+  if (Math.abs(e.clientX - dragStartX) > 4 || Math.abs(e.clientY - dragStartY) > 4) isDragging = true;
+});
+renderer.domElement.addEventListener('click', (e) => {
+  if (isDragging || wells.length >= 3) return;
+  // Use mouseTarget (raycasted world pos) not mouseWorld (lerped)
+  const wellPos = mouseTarget.clone();
+  wells.push(wellPos);
+  wellVectors[wells.length - 1].copy(wellPos);
+  if (material) {
+    material.uniforms.uWells.value = wellVectors;
+    material.uniforms.uWellCount.value = wells.length;
+  }
+});
+renderer.domElement.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  if (wells.length === 0) return;
+  wells.pop();
+  wellVectors[wells.length].set(9999,9999,9999);
+  if (material) {
+    material.uniforms.uWells.value = wellVectors;
+    material.uniforms.uWellCount.value = wells.length;
+  }
 });
 
 // ── Shaders ────────────────────────────────────────
@@ -1571,6 +1607,23 @@ bloomFolder.add(params, 'bloomRadius', 0, 2, 0.1).name('Radius').onChange(v => {
 mouseFolder.close();
 trailFolder.close();
 bloomFolder.close();
+const wellsCtrl = {
+  strength: 0.4,
+  clearWells() {
+    wells.length = 0;
+    wellVectors.forEach(v => v.set(9999,9999,9999));
+    if (material) {
+      material.uniforms.uWells.value = wellVectors;
+      material.uniforms.uWellCount.value = 0;
+    }
+  }
+};
+const wellsFolder = gui.addFolder('Gravity Wells');
+wellsFolder.add(wellsCtrl, 'strength', 0.1, 2.0, 0.1).name('Strength').onChange(v => {
+  if (material) material.uniforms.uWellStrength.value = v;
+});
+wellsFolder.add(wellsCtrl, 'clearWells').name('Clear Wells');
+wellsFolder.close();
 
 // ── Animation ──────────────────────────────────────
 const clock = new THREE.Clock();
