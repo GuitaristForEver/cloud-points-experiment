@@ -394,15 +394,23 @@ const vertexShader = `
 `;
 
 const fragmentShader = `
+  uniform float uTime;
+  uniform float uAlphaScale;
   varying vec3 vColor;
   varying float vAlpha;
+  varying vec3 vWorldPos;
 
   void main() {
     float dist = length(gl_PointCoord - vec2(0.5));
     if (dist > 0.5) discard;
     float strength = 1.0 - dist * 2.0;
     strength = pow(strength, 2.0);
-    gl_FragColor = vec4(vColor, strength * vAlpha * 0.6);
+
+    // Per-particle brightness pulse (unique phase from position hash)
+    float hash = fract(sin(dot(vWorldPos.xy, vec2(127.1, 311.7))) * 43758.5);
+    float pulse = 0.85 + 0.15 * sin(uTime * 1.5 + hash * 6.28318);
+
+    gl_FragColor = vec4(vColor, strength * vAlpha * 0.6 * pulse * uAlphaScale);
   }
 `;
 
@@ -1392,6 +1400,7 @@ function createPointCloud() {
       uMouseRadius: { value: params.mouseRadius },
       uMouseStrength: { value: params.mouseStrength },
       uMouseEnabled: { value: params.mouseEnabled ? 1.0 : 0.0 },
+      uAlphaScale: { value: 1.0 },
     },
     vertexShader,
     fragmentShader,
