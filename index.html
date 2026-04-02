@@ -1479,6 +1479,7 @@ const params = {
 
 let pointsMesh, geometry, material;
 let nebulaMesh = null;
+let cameraAnimTarget = null;
 let morphTarget = null;
 let morphProgress = 0, morphDirection = 1;
 let currentPositions, targetPositions, currentColors, targetColors, currentSizes, targetSizes;
@@ -1662,7 +1663,7 @@ shapeFolder.add(params, 'object', Object.keys(generators)).name('Object').onChan
   }
   switchObject();
 });
-shapeFolder.add(params, 'particles', 5000, 100000, 1000).name('Particles').onFinishChange(switchObject);
+shapeFolder.add(params, 'particles', 5000, 300000, 5000).name('Particles').onFinishChange(switchObject);
 shapeFolder.add(params, 'pointSize', 1, 30, 0.5).name('Point Size').onChange(v => { material.uniforms.uSize.value = v; });
 
 // Galaxy type controls (hidden when not on Galaxy)
@@ -1755,6 +1756,19 @@ wellsFolder.add(wellsCtrl, 'strength', 0.1, 2.0, 0.1).name('Strength').onChange(
 wellsFolder.add(wellsCtrl, 'clearWells').name('Clear Wells');
 wellsFolder.close();
 
+const cameraPresets = {
+  top()       { cameraAnimTarget = new THREE.Vector3(0, 8, 0.001); controls.autoRotate = false; },
+  side()      { cameraAnimTarget = new THREE.Vector3(7, 0, 0); controls.autoRotate = false; },
+  cinematic() { cameraAnimTarget = new THREE.Vector3(3, 2, 4); controls.autoRotate = false; },
+  reset()     { cameraAnimTarget = new THREE.Vector3(0, 1.5, 5); controls.autoRotate = params.autoRotate; },
+};
+const cameraFolder = gui.addFolder('Camera');
+cameraFolder.add(cameraPresets, 'top').name('Top View');
+cameraFolder.add(cameraPresets, 'side').name('Side View');
+cameraFolder.add(cameraPresets, 'cinematic').name('Cinematic');
+cameraFolder.add(cameraPresets, 'reset').name('Reset');
+cameraFolder.close();
+
 // ── Animation ──────────────────────────────────────
 const clock = new THREE.Clock();
 
@@ -1765,6 +1779,18 @@ function animate() {
   const delta = clock.getDelta();
   const elapsed = clock.getElapsedTime();
   controls.update();
+
+  // Camera preset smooth animation
+  // Note: do NOT call camera.lookAt() — OrbitControls owns orientation.
+  // Set controls.target so controls.update() points camera correctly.
+  if (cameraAnimTarget) {
+    camera.position.lerp(cameraAnimTarget, delta * 3.0);
+    controls.target.set(0, 0, 0);
+    if (camera.position.distanceTo(cameraAnimTarget) < 0.05) {
+      camera.position.copy(cameraAnimTarget);
+      cameraAnimTarget = null;
+    }
+  }
 
   if (!pointsMesh) return;
 
