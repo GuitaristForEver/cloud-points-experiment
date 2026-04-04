@@ -1890,9 +1890,9 @@ Object.keys(generators).forEach(name => {
   item.innerHTML = `${objectIcons[name] || '●'}<span class="sidebar-tooltip">${name}</span>`;
   item.addEventListener('click', () => {
     params.object = name;
-    // Update GUI dropdown to stay in sync
-    shapeFolder.controllers.find(c => c.property === 'object')?.setValue(name);
+    switchObject();
     updateOverlayUI();
+    gui.controllersRecursive().find(c => c.property === 'object')?.updateDisplay();
   });
   sidebarEl.appendChild(item);
   sidebarItems[name] = item;
